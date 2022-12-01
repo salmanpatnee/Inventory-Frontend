@@ -1,18 +1,17 @@
 <script setup>
-import http from "@/services/httpService";
-import { onMounted, ref } from "vue";
+import { useDashboardStore } from "@/stores/dashboardStore.js";
+import { onMounted, computed } from "vue";
 
-const stats = ref({});
-const isLoading = ref(true);
+const dashboardStore = useDashboardStore();
+const stats = computed(() => dashboardStore.stats.data);
+const isLoading = computed(() => dashboardStore.stats.isLoading);
 
-const getTodaysStats = async (page = 1) => {
-  const { data: response } = await http.get(`/api/dashboard`);
-  stats.value = response;
-  isLoading.value = false;
+const getTodayStats = async () => {
+  await dashboardStore.getTodayStats();
 };
 
 onMounted(async () => {
-  await getTodaysStats();
+  await getTodayStats();
 });
 </script>
 <template>
@@ -147,11 +146,14 @@ onMounted(async () => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(product, index) in stats.outOfStockProducts" :key="product.id">
+          <tr
+            v-for="(product, index) in stats.outOfStockProducts"
+            :key="product.id"
+          >
             <td>{{ index + 1 }}</td>
             <td>{{ product.name }}</td>
             <td>{{ product.code }}</td>
-            <td v-if="product.category">{{product.category.name}}</td>
+            <td v-if="product.category">{{ product.category.name }}</td>
             <td>{{ product.price }}</td>
             <td>{{ product.quantity }}</td>
           </tr>
