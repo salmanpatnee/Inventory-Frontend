@@ -1,17 +1,32 @@
 <script setup>
-import http from "@/services/httpService";
+import { useEmployeeStore } from "@/stores/employeeStore.js";
 import { useRouter } from "vue-router";
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 
-const employees = ref([]);
-const isLoading = ref(true);
+const employeeStore = useEmployeeStore();
 const router = useRouter();
+const paginate = ref(10);
+const search = ref("");
+
+const employees = computed(() => employeeStore.employees.data);
+const isLoading = computed(() => employeeStore.employees.isLoading);
+
+watch(
+  () => paginate.value,
+  (newVal, prevVal) => {
+    getEmployees();
+  }
+);
+watch(
+  () => search.value,
+  (newTerm, prevTerm) => {
+    getEmployees();
+  }
+);
 
 const getEmployees = async (page = 1) => {
-  const params = `?page=${page}`;
-  const { data: response } = await http.get(`/api/employees${params}`);
-  employees.value = response;
-  isLoading.value = false;
+  const params = `?page=${page}&paginate=${paginate.value}&search=${search.value}`;
+  await employeeStore.getEmployees(params);
 };
 
 const handlePay = async (id) => {
@@ -26,6 +41,19 @@ onMounted(() => {
   <AppPageHeader title="Add Salary"></AppPageHeader>
 
   <AppPanel>
+    <div class="align-items-baseline d-flex row mb-3">
+      <div class="col-sm-2">
+        <AppPaginateDropdown v-model="paginate" />
+      </div>
+      <div class="col-sm-6 text-center">
+        <!-- <button class="btn btn-outline-primary" @click="handleExportToExcel">
+          <i class="fa fa-download" aria-hidden="true"></i> Export to Excel
+        </button> -->
+      </div>
+      <div class="col-sm-4">
+        <AppSearch v-model="search" />
+      </div>
+    </div>
     <div class="text-center alert alert-info" v-if="isLoading">Loading...</div>
     <div v-else class="table-responsive">
       <table class="table align-items-center table-flush">

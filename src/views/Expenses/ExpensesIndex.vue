@@ -1,38 +1,37 @@
 <script setup>
-import http from "@/services/httpService";
+import { useExpenseStore } from "@/stores/expenseStore.js";
 import { useRouter } from "vue-router";
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, computed, onMounted } from "vue";
 
-const expenses = ref([]);
+const expenseStore = useExpenseStore();
 const paginate = ref(10);
 const search = ref("");
-const isLoading = ref(true);
 const router = useRouter();
+
+const expenses = computed(() => expenseStore.expenses.data);
+const isLoading = computed(() => expenseStore.expenses.isLoading);
 
 watch(
   () => paginate.value,
-  (paginate, prevCount) => {
+  (newVal, prevVal) => {
     getExpenses();
   }
 );
-
 watch(
   () => search.value,
-  (newTerm, oldTerm) => {
+  (newTerm, prevTerm) => {
     getExpenses();
   }
 );
 
 const getExpenses = async (page = 1) => {
   const params = `?page=${page}&paginate=${paginate.value}&search=${search.value}`;
-  const { data: response } = await http.get(`/api/expenses${params}`);
-  expenses.value = response;
-  isLoading.value = false;
+  await expenseStore.getExpenses(params);
 };
 
 const handleDelete = async (id) => {
-  const originalExpenses = expenses.value;
-  expenses.value = originalExpenses.filter((expense) => expense.id !== id);
+  const originalExpenses = expenses.value.data;
+  expenses.value.data = originalExpenses.filter((expense) => expense.id !== id);
 
   Swal.fire({
     title: "Are you sure?",
@@ -45,11 +44,11 @@ const handleDelete = async (id) => {
   })
     .then(async (result) => {
       if (result.isConfirmed) {
-        const { data: response } = await http.delete(`/api/expenses/${id}`);
+        const { data: response } = await expenseStore.deleteExpense(id);
         if (response.status === "success")
           Swal.fire("Deleted!", response.message, "success");
       } else {
-        expenses.value = originalExpenses;
+        expenses.value.data = originalExpenses;
       }
     })
     .catch((error) => {

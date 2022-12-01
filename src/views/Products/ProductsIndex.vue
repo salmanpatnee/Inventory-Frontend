@@ -13,13 +13,13 @@ const isLoading = computed(() => productStore.products.isLoading);
 
 watch(
   () => paginate.value,
-  (newVal, oldVal) => {
+  (newVal, prevVal) => {
     getProducts();
   }
 );
 watch(
   () => search.value,
-  (newTerm, oldTerm) => {
+  (newTerm, prevTerm) => {
     getProducts();
   }
 );

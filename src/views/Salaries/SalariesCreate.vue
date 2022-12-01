@@ -1,59 +1,63 @@
 <script setup>
-import http from "@/services/httpService";
+import { useEmployeeStore } from "@/stores/employeeStore.js";
+import { useSalaryStore } from "@/stores/salaryStore.js";
 import Form from "vform";
 import { useRouter, useRoute } from "vue-router";
 import { ref, computed, onMounted } from "vue";
 import dayjs from "dayjs";
 
+const employeeStore = useEmployeeStore();
+const salaryStore = useSalaryStore();
 const router = useRouter();
 const route = useRoute();
-const isLoading = ref(true);
 const editMode = ref(false);
+
+const employee = computed(() => employeeStore.currentEmployee.data);
+const isLoading = computed(() => employeeStore.currentEmployee.isLoading);
+const salary = computed(() => salaryStore.currentSalary.data);
 
 const form = ref(
   new Form({
-    id: null, 
+    id: null,
     name: null,
-    salary: null, 
+    salary: null,
+    year: null,
   })
 );
 
 const pageHeaderTitle = computed(() => {
-    return editMode.value ? 'Update Salary' : 'Pay Salary';
-})
-
+  return editMode.value ? "Update Salary" : "Pay Salary";
+});
 
 const getEmployee = async () => {
-  const { data: response } = await http.get(
-    `/api/employees/${route.params.employee_id}`
-  );
-  form.value.fill(response.data);
-
-  form.value.paid_date = dayjs().format("YYYY-MM-DD")
-  form.value.month = ""
-  form.value.year = dayjs().format("YYYY"), 
-  form.value.amount =  form.value.salary, 
-  form.value.employee_id =  form.value.id, 
-
+  await employeeStore.getEmployee(route.params.employee_id);
+  form.value.fill(employee.value);
+  form.value.employee_id = form.value.id;
+  form.value.amount = form.value.salary;
+  form.value.paid_date = dayjs().format("YYYY-MM-DD");
+  form.value.month = "";
+  form.value.year = dayjs().format("YYYY");
   isLoading.value = false;
 };
 
 const getSalary = async () => {
-  const { data: response } = await http.get(
-    `/api/salaries/${route.params.id}`
-  );
+  await salaryStore.getSalary(route.params.id);
+  form.value.fill(salary.value);
 
-  form.value.fill(response.data);
-  form.value.name = response.data.employee.name;
-  form.value.salary = response.data.amount;
-  form.value.paid_date = dayjs(response.data.paid_date).format("YYYY-MM-DD")
- 
+  form.value.employee_id = salary.value.employee.id;
+  form.value.name = salary.value.employee.name;
+  form.value.salary = salary.value.amount;
+  form.value.amount = salary.value.amount;
+  form.value.month = salary.value.month;
+  form.value.year = salary.value.year;
+  form.value.paid_date = dayjs(salary.value.paid_date).format("YYYY-MM-DD");
+
   isLoading.value = false;
-}
+};
 
 const store = async () => {
   try {
-    const { data: response } = await form.value.post(`/api/salaries`);
+    const { data: response } = await salaryStore.addSalary(form.value);
     if (response.status === "success") {
       Toast.fire({
         icon: "success",
@@ -71,7 +75,10 @@ const store = async () => {
 
 const update = async () => {
   try {
-    const { data: response } = await form.value.put(`/api/salaries/${route.params.id}`);
+    const { data: response } = await salaryStore.updateSalary(
+      form.value,
+      route.params.id
+    );
     if (response.status === "success") {
       Toast.fire({
         icon: "success",
@@ -89,16 +96,14 @@ const update = async () => {
 
 onMounted(() => {
   // Update Salary
-  if(route.params.id) {
+  if (route.params.id) {
     getSalary();
     editMode.value = true;
-  } 
+  }
   // Add Salary
-  else if(route.params.employee_id) {
+  else if (route.params.employee_id) {
     getEmployee();
   }
-    
-
 });
 </script>
 <template>
@@ -118,7 +123,8 @@ onMounted(() => {
               v-model="form.name"
               type="text"
               class="form-control"
-              id="name" readonly
+              id="name"
+              readonly
             />
             <HasError :form="form" field="name" />
           </div>
@@ -175,7 +181,7 @@ onMounted(() => {
       </div>
       <div class="text-right">
         <Button class="btn btn-primary" :form="form">
-          {{editMode ? 'Update' : 'Pay'}}
+          {{ editMode ? "Update" : "Pay" }}
         </Button>
       </div>
     </form>

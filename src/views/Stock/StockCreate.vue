@@ -1,12 +1,15 @@
 <script setup>
-import http from "@/services/httpService";
+import { useStockStore } from "@/stores/stockStore.js";
 import Form from "vform";
 import { useRouter, useRoute } from "vue-router";
 import { ref, onMounted, computed } from "vue";
 
+const stockStore = useStockStore();
 const router = useRouter();
 const route = useRoute();
-const isLoading = ref(true);
+
+const stock = computed(() => stockStore.currentStock.data);
+const isLoading = computed(() => stockStore.currentStock.isLoading);
 
 const form = ref(
   new Form({
@@ -15,17 +18,17 @@ const form = ref(
 );
 
 const getStock = async () => {
-  const { data: response } = await http.get(
-    `/api/stock/${route.params.id}`
-  );
-
-  form.value.quantity = response.stock
-  isLoading.value = false;
+  await stockStore.getStock(route.params.id);
+  form.value.quantity = stock.value.stock;
 };
 
 const store = async () => {
   try {
-    const { data: response } = await form.value.put(`/api/stock/${route.params.id}`);
+    const { data: response } = await stockStore.updateStock(
+      form.value,
+      route.params.id
+    );
+
     if (response.status === "success") {
       Toast.fire({
         icon: "success",
@@ -42,7 +45,7 @@ const store = async () => {
 };
 
 onMounted(() => {
-    getStock();
+  getStock();
 });
 </script>
 <template>

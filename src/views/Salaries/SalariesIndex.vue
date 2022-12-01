@@ -1,18 +1,18 @@
 <script setup>
-import http from "@/services/httpService";
+import { useSalaryStore } from "@/stores/salaryStore.js";
 import dayjs from "dayjs";
 import { useRouter } from "vue-router";
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 
-const salaries = ref([]);
+const salaryStore = useSalaryStore();
 const year = ref(dayjs().format("YYYY"));
-const isLoading = ref(true);
 const router = useRouter();
 
+const salaries = computed(() => salaryStore.salaries.data);
+const isLoading = computed(() => salaryStore.salaries.isLoading);
+
 const getSalaries = async (page = 1) => {
-  const { data: response } = await http.get(`/api/salaries`);
-  salaries.value = response;
-  isLoading.value = false;
+  await salaryStore.getSalaries();
 };
 
 const handleShow = async (month) => {

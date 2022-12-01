@@ -13,13 +13,13 @@ const isLoading = computed(() => employeeStore.employees.isLoading);
 
 watch(
   () => paginate.value,
-  (newVal, oldVal) => {
+  (newVal, prevVal) => {
     getEmployees();
   }
 );
 watch(
   () => search.value,
-  (newTerm, oldTerm) => {
+  (newTerm, prevTerm) => {
     getEmployees();
   }
 );

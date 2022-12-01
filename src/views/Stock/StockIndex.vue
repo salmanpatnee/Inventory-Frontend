@@ -1,33 +1,32 @@
 <script setup>
-import http from "@/services/httpService";
+import { useProductStore } from "@/stores/productStore.js";
 import { useRouter } from "vue-router";
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, computed } from "vue";
 
-const products = ref([]);
+const productStore = useProductStore();
 const paginate = ref(10);
 const search = ref("");
-const isLoading = ref(true);
 const router = useRouter();
+
+const products = computed(() => productStore.products.data);
+const isLoading = computed(() => productStore.products.isLoading);
 
 watch(
   () => paginate.value,
-  (paginate, prevCount) => {
+  (newVal, prevVal) => {
     getProducts();
   }
 );
-
 watch(
   () => search.value,
-  (paginate, prevCount) => {
+  (newTerm, prevTerm) => {
     getProducts();
   }
 );
 
 const getProducts = async (page = 1) => {
   const params = `?page=${page}&paginate=${paginate.value}&search=${search.value}`;
-  const { data: response } = await http.get(`/api/products${params}`);
-  products.value = response;
-  isLoading.value = false;
+  await productStore.getProducts(params);
 };
 
 const handleEdit = async (id) => {

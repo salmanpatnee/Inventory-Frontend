@@ -1,13 +1,16 @@
 <script setup>
-import http from "@/services/httpService";
+import { useExpenseStore } from "@/stores/expenseStore.js";
 import Form from "vform";
 import { useRouter, useRoute } from "vue-router";
 import { ref, onMounted, computed } from "vue";
 
+const expenseStore = useExpenseStore();
 const router = useRouter();
 const route = useRoute();
 const editMode = ref(false);
-const isLoading = ref(true);
+
+const expense = computed(() => expenseStore.currentExpense.data);
+const isLoading = computed(() => expenseStore.currentExpense.isLoading);
 
 const form = ref(
   new Form({
@@ -23,16 +26,13 @@ const pageHeaderTitle = computed(() => {
 
 const getExpense = async () => {
   editMode.value = true;
-  const { data: response } = await http.get(
-    `/api/expenses/${route.params.id}`
-  );
-  form.value.fill(response.data);
-  isLoading.value = false;
+  await expenseStore.getExpense(route.params.id);
+  form.value.fill(expense.value);
 };
 
 const store = async () => {
   try {
-    const { data: response } = await form.value.post(`/api/expenses`);
+    const { data: response } = await expenseStore.addExpense(form.value);
     if (response.status === "success") {
       Toast.fire({
         icon: "success",
@@ -50,8 +50,9 @@ const store = async () => {
 
 const update = async () => {
   try {
-    const { data: response } = await form.value.put(
-      `/api/expenses/${route.params.id}`
+    const { data: response } = await expenseStore.updateExpense(
+      form.value,
+      route.params.id
     );
 
     if (response.status === "success") {
@@ -71,8 +72,6 @@ const update = async () => {
 onMounted(() => {
   if (route.params.id) {
     getExpense();
-  } else {
-    isLoading.value = false;
   }
 });
 </script>
