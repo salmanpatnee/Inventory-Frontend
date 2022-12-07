@@ -2,15 +2,25 @@
 import { useSalaryStore } from "@/stores/salaryStore.js";
 import dayjs from "dayjs";
 import { useRouter, useRoute } from "vue-router";
-import { ref, computed, watch, onMounted } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
 const salaryStore = useSalaryStore();
 const paginate = ref(10);
-const search = ref("");
-const year = ref(dayjs().format("YYYY"));
-
 const router = useRouter();
 const route = useRoute();
+const search = ref("");
+const year = ref(dayjs().format("YYYY"));
+const sortColumn = ref({ path: "paid_date", order: "asc" });
+
+const columns = [
+  { path: "#", label: "S.No" },
+  { path: "employee_id", label: "Name", sortable: true },
+  { path: "paid_date", label: "Paid Date", sortable: true },
+  { path: "amount", label: "Amount", sortable: true },
+  { path: "month", label: "Month" },
+  { path: "year", label: "Year" },
+  { path: "", label: "Action" },
+];
 
 const salaries = computed(() => salaryStore.salaries.data);
 const isLoading = computed(() => salaryStore.salaries.isLoading);
@@ -34,13 +44,20 @@ watch(
 );
 
 const getSalaries = async (page = 1) => {
+  const { order, path } = sortColumn.value;
   const { month, year } = route.params;
-  const params = `?month=${month}&year=${year}&page=${page}&paginate=${paginate.value}&search=${search.value}`;
+  const params = `?month=${month}&year=${year}&page=${page}&paginate=${paginate.value}&search=${search.value}&sortOrder=${order}&orderBy=${path}`;
   await salaryStore.getSalariesByMonth(params);
 };
 
 const handleEdit = async (id) => {
   router.push({ name: "salaries.edit", params: { id } });
+};
+
+const handleSort = async (sort) => {
+  sortColumn.value.path = sort.path;
+  sortColumn.value.order = sort.order;
+  await getSalaries();
 };
 
 onMounted(() => {
@@ -52,31 +69,24 @@ onMounted(() => {
   <AppPageHeader :title="pageHeaderTitle"></AppPageHeader>
 
   <AppPanel>
-    <div class="text-center alert alert-info" v-if="isLoading">Loading...</div>
-    <div v-else>
-      <div class="row">
-        <div class="col-sm-2">
-          <AppPaginateDropdown v-model="paginate" />
-        </div>
-        <div class="col-sm-6"></div>
-        <div class="col-sm-4">
-          <AppSearch v-model="search" />
-        </div>
+    <div class="row">
+      <div class="col-sm-2">
+        <AppPaginateDropdown v-model="paginate" />
+      </div>
+      <div class="col-sm-6"></div>
+      <div class="col-sm-4">
+        <AppSearch v-model="search" />
       </div>
     </div>
-    <div class="table-responsive">
+
+    <div class="text-center alert alert-info" v-if="isLoading">Loading...</div>
+    <div v-else class="table-responsive">
       <table class="table align-items-center table-flush">
-        <thead class="thead-light">
-          <tr>
-            <th>S. No</th>
-            <th>Name</th>
-            <th>Paid Date</th>
-            <th>Amount</th>
-            <th>Month</th>
-            <th>Year</th>
-            <th class="text-center">Action</th>
-          </tr>
-        </thead>
+        <AppTableHeader
+          @onSort="handleSort"
+          :columns="columns"
+          :sortColumn="sortColumn"
+        />
         <tbody>
           <tr v-for="(salary, index) in salaries.data" :key="salary.id">
             <td>{{ index + 1 }}</td>

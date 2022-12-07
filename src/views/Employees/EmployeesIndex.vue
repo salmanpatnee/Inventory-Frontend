@@ -1,12 +1,24 @@
 <script setup>
 import { useEmployeeStore } from "@/stores/employeeStore.js";
 import { useRouter } from "vue-router";
-import { ref, watch, computed, onMounted } from "vue";
+import { useFlash } from "@/composables/useFlash";
+import { computed, onMounted, ref, watch } from "vue";
 
 const employeeStore = useEmployeeStore();
+const router = useRouter();
+const { confirmAtts, flashSuccess, flashError } = useFlash();
 const paginate = ref(10);
 const search = ref("");
-const router = useRouter();
+const sortColumn = ref({ path: "name", order: "asc" });
+
+const columns = [
+  { path: "#", label: "S.No" },
+  { path: "name", label: "Name", sortable: true },
+  { path: "email", label: "Email", sortable: true },
+  { path: "salary", label: "Salary", sortable: true },
+  { path: "joining_date", label: "Joining Date", sortable: true },
+  { path: "", label: "Action" },
+];
 
 const employees = computed(() => employeeStore.employees.data);
 const isLoading = computed(() => employeeStore.employees.isLoading);
@@ -25,7 +37,8 @@ watch(
 );
 
 const getEmployees = async (page = 1) => {
-  const params = `?page=${page}&paginate=${paginate.value}&search=${search.value}`;
+  const { order, path } = sortColumn.value;
+  const params = `?page=${page}&paginate=${paginate.value}&search=${search.value}&sortOrder=${order}&orderBy=${path}`;
   await employeeStore.getEmployees(params);
 };
 
@@ -36,34 +49,27 @@ const handleDelete = async (id) => {
     (employee) => employee.id !== id
   );
 
-  Swal.fire({
-    title: "Are you sure?",
-    text: "You won't be able to revert this!",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#3085d6",
-    cancelButtonColor: "#d33",
-    confirmButtonText: "Yes, delete it!",
-  })
+  Swal.fire(confirmAtts())
     .then(async (result) => {
       if (result.isConfirmed) {
         const { data: response } = await employeeStore.deleteEmployee(id);
         if (response.status === "success")
-          Swal.fire("Deleted!", response.message, "success");
+        flashSuccess(response.message)
       } else {
         employees.value.data = originalEmployees;
       }
     })
-    .catch((error) => {
-      Toast.fire({
-        icon: "error",
-        title: "An unexpected error occurred.",
-      });
-    });
+    .catch((error) => flashError());
 };
 
 const handleEdit = async (id) => {
   router.push({ name: "employees.edit", params: { id: id } });
+};
+
+const handleSort = async (sort) => {
+  sortColumn.value.path = sort.path;
+  sortColumn.value.order = sort.order;
+  await getEmployees();
 };
 
 onMounted(() => {
@@ -78,7 +84,7 @@ onMounted(() => {
   </AppPageHeader>
 
   <AppPanel>
-    <div class="align-items-baseline d-flex row mb-3">
+    <div class="align-items-baseline d-flex row">
       <div class="col-sm-2">
         <AppPaginateDropdown v-model="paginate" />
       </div>
@@ -95,16 +101,11 @@ onMounted(() => {
     <div v-else>
       <div class="table-responsive">
         <table class="table align-items-center table-flush">
-          <thead class="thead-light">
-            <tr>
-              <th>S.No</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Salary</th>
-              <th>Joining Date</th>
-              <th class="text-center">Action</th>
-            </tr>
-          </thead>
+          <AppTableHeader
+            @onSort="handleSort"
+            :columns="columns"
+            :sortColumn="sortColumn"
+          />
           <tbody>
             <tr v-for="(employee, index) in employees.data" :key="employee.id">
               <td>{{ index + 1 }}</td>

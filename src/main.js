@@ -5,6 +5,7 @@ import AppPanel from "@/components/AppPanel.vue"
 import AppDate from "@/components/AppDate.vue"
 import AppPaginateDropdown from "@/components/AppPaginateDropdown.vue"
 import AppSearch from "@/components/AppSearch.vue"
+import AppTableHeader from "@/components/AppTableHeader.vue"
 import { Bootstrap4Pagination } from 'laravel-vue-pagination';
 
 import App from "./App.vue";
@@ -40,6 +41,7 @@ app.component('AppDate', AppDate)
 app.component('AppPaginateDropdown', AppPaginateDropdown)
 app.component('AppSearch', AppSearch)
 app.component('AppPanel', AppPanel)
+app.component('AppTableHeader', AppTableHeader)
 app.component(Button.name, Button)
 app.component(HasError.name, HasError)
 app.component(AlertError.name, AlertError)

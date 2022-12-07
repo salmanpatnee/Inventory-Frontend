@@ -1,12 +1,21 @@
 <script setup>
 import { useEmployeeStore } from "@/stores/employeeStore.js";
 import { useRouter } from "vue-router";
-import { ref, computed, onMounted, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
 const employeeStore = useEmployeeStore();
 const router = useRouter();
 const paginate = ref(10);
 const search = ref("");
+const sortColumn = ref({ path: "name", order: "asc" });
+
+const columns = [
+  { path: "#", label: "S.No" },
+  { path: "name", label: "Name", sortable: true },
+  { path: "salary", label: "Salary", sortable: true },
+  { path: "", label: "Action" },
+];
+
 
 const employees = computed(() => employeeStore.employees.data);
 const isLoading = computed(() => employeeStore.employees.isLoading);
@@ -25,12 +34,19 @@ watch(
 );
 
 const getEmployees = async (page = 1) => {
-  const params = `?page=${page}&paginate=${paginate.value}&search=${search.value}`;
+  const { order, path } = sortColumn.value;
+  const params = `?page=${page}&paginate=${paginate.value}&search=${search.value}&sortOrder=${order}&orderBy=${path}`;
   await employeeStore.getEmployees(params);
 };
 
 const handlePay = async (id) => {
   router.push({ name: "salaries.create", params: { employee_id: id } });
+};
+
+const handleSort = async (sort) => {
+  sortColumn.value.path = sort.path;
+  sortColumn.value.order = sort.order;
+  await getEmployees();
 };
 
 onMounted(() => {
@@ -57,14 +73,11 @@ onMounted(() => {
     <div class="text-center alert alert-info" v-if="isLoading">Loading...</div>
     <div v-else class="table-responsive">
       <table class="table align-items-center table-flush">
-        <thead class="thead-light">
-          <tr>
-            <th>S. No</th>
-            <th>Name</th>
-            <th>Salary</th>
-            <th class="text-center">Action</th>
-          </tr>
-        </thead>
+        <AppTableHeader
+          @onSort="handleSort"
+          :columns="columns"
+          :sortColumn="sortColumn"
+        />
         <tbody>
           <tr v-for="(employee, index) in employees.data" :key="employee.id">
             <td>{{ index + 1 }}</td>

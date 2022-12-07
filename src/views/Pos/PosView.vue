@@ -1,16 +1,34 @@
 <script setup>
-import http from "@/services/httpService";
-import Form from "vform";
+import { useProductStore } from "@/stores/productStore.js";
+import { useCustomerStore } from "@/stores/customerStore.js";
+import { useCartStore } from "@/stores/cartStore.js";
+import { useSaleStore } from "@/stores/saleStore.js";
 import { useRouter } from "vue-router";
+import { useFlash } from "@/composables/useFlash";
+import Form from "vform";
 import { computed, onMounted, ref, watch } from "vue";
 import ProductCard from "@/components/ProductCard.vue";
 
-const products = ref([]);
-const customers = ref([]);
-const cartItems = ref([]);
-const isLoading = ref(true);
-const isCartLoading = ref(true);
+const productStore = useProductStore();
+const customerStore = useCustomerStore();
+const cartStore = useCartStore();
+const saleStore = useSaleStore();
 const router = useRouter();
+const { confirmAtts, flashSuccess, flashError } = useFlash();
+
+const products = computed(() => productStore.products.data);
+const isproductsLoading = computed(() => productStore.products.isLoading);
+const customers = computed(() => customerStore.customers.data);
+const items = computed(() => cartStore.items.data);
+const isItemsLoading = computed(() => cartStore.items.isLoading);
+
+const columns = [
+  { path: "product", label: "Product" },
+  { path: "quantity", label: "Qty" },
+  { path: "unit", label: "Unit" },
+  { path: "total", label: "Total" },
+  { path: "", label: "" },
+];
 
 const form = ref(
   new Form({
@@ -28,17 +46,13 @@ const form = ref(
 
 const displayTotalQuantities = computed(() => {
   let totalQuantites = 0;
-  cartItems.value.forEach(
-    (cartItem) => (totalQuantites += parseInt(cartItem.quantity))
-  );
+  items.value.forEach((item) => (totalQuantites += parseInt(item.quantity)));
   return totalQuantites;
 });
 
 const displaySubTotal = computed(() => {
   let subTotal = 0;
-  cartItems.value.forEach(
-    (cartItem) => (subTotal += parseFloat(cartItem.sub_total))
-  );
+  items.value.forEach((item) => (subTotal += parseFloat(item.sub_total)));
   return subTotal.toFixed(2);
 });
 
@@ -48,120 +62,83 @@ const displayGrandTotal = computed(() => {
   return grandTotal.toFixed(2);
 });
 
-watch(displayTotalQuantities, (newQty, oldQty) => {
+watch(displayTotalQuantities, (newQty, prevQty) => {
   form.value.total_quantities = newQty;
 });
 
-watch(displaySubTotal, (newSubTotal, oldSubTotal) => {
+watch(displaySubTotal, (newSubTotal, prevSubTotal) => {
   form.value.sub_total = newSubTotal;
 });
 
-watch(displayGrandTotal, (newTotal, oldTotal) => {
+watch(displayGrandTotal, (newTotal, prevTotal) => {
   form.value.grand_total = newTotal;
 });
 
-const getProducts = async (page = 1) => {
-  const { data: response } = await http.get(`/api/products`);
-  products.value = response.data;
-  isLoading.value = false;
+const getProducts = async () => {
+  await productStore.getProducts();
 };
 
-const getCustomers = async (page = 1) => {
-  const { data: response } = await http.get(`/api/customers`);
-  customers.value = response.data;
-  isLoading.value = false;
+const getCustomers = async () => {
+  await customerStore.getCustomers();
 };
 
 const getCartItems = async (page = 1) => {
-  const { data: response } = await http.get(`/api/carts`);
-  cartItems.value = response.data;
-  isCartLoading.value = false;
+  await cartStore.getItems();
 };
 
 const handleAddToCart = async (productId) => {
   try {
     form.value.product_id = productId;
-    const { data: response } = await form.value.post(`/api/carts`);
+    const { data: response } = await cartStore.addItem(form.value);
     getCartItems();
-    Toast.fire({
-      icon: "success",
-      title: response.message,
-    });
+    flashSuccess(response.message);
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 
 const handleRemoveCartItem = async (id) => {
-  const originalCartItems = cartItems.value;
-  cartItems.value = originalCartItems.filter((cart) => cart.id !== id);
+  const originalCartItems = items.value;
 
-  Swal.fire({
-    title: "Are you sure?",
-    text: "You won't be able to revert this!",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#3085d6",
-    cancelButtonColor: "#d33",
-    confirmButtonText: "Yes, delete it!",
-  })
+  items.value = originalCartItems.filter((cart) => cart.id !== id);
+
+  Swal.fire(confirmAtts())
     .then(async (result) => {
       if (result.isConfirmed) {
-        const { data: response } = await http.delete(`/api/carts/${id}`);
-        if (response.status === "success")
-          Swal.fire("Deleted!", response.message, "success");
+        const { data: response } = await cartStore.deleteItem(id);
+        if (response.status === "success") flashSuccess(response.message);
       } else {
-        cartItems.value = originalCartItems;
+        items.value = originalCartItems;
       }
     })
-    .catch((error) => {
-      Toast.fire({
-        icon: "error",
-        title: "An unexpected error occurred.",
-      });
-    });
+    .catch((error) => flashError());
 };
 
 const handleChangeQuantity = async (id, quantity) => {
   if (quantity < 1) {
-    Toast.fire({
-      icon: "error",
-      title: "Item quantity can not negative.",
-    });
+    flashError("Item quantity can not negative.");
     return;
   }
+
   form.value.id = id;
   form.value.quantity = quantity;
-  const { data: response } = await form.value.put(`/api/carts/${id}`);
+  const { data: response } = await cartStore.updateItem(form.value, id);
   if (response.status === "success") {
-    Toast.fire({
-      icon: "success",
-      title: response.message,
-    });
+    flashSuccess(response.message);
     getCartItems();
   }
 };
 
 const handleCheckout = async () => {
   try {
-    const { data: response } = await form.value.post(`/api/sales`);
-
+    const { data: response } = await saleStore.addSale(form.value);
 
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "sales.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 
@@ -188,48 +165,40 @@ onMounted(async () => {
             Add Customer
           </button>
         </div>
-        <div class="text-center alert alert-info" v-if="isCartLoading">
+        <div class="text-center alert alert-info" v-if="isItemsLoading">
           Loading...
         </div>
         <div
           class="text-center alert alert-danger"
-          v-if="!isCartLoading && !cartItems.length"
+          v-if="!isItemsLoading && !items.length"
         >
           Cart is empty!
         </div>
 
         <div class="table-responsive mb-3" v-else>
           <table class="table align-items-center table-flush">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Qty</th>
-                <th>Unit</th>
-                <th>Total</th>
-                <th></th>
-              </tr>
-            </thead>
+            <AppTableHeader :columns="columns" />
             <tbody>
-              <tr v-for="(cartItem, index) in cartItems" :key="cartItem.id">
-                <td>{{ cartItem.product.name }}</td>
+              <tr v-for="item in items" :key="item.id">
+                <td>{{ item.product.name }}</td>
                 <td>
                   <div class="d-flex">
                     <input
                       type="number"
                       min="1"
                       @change="
-                        handleChangeQuantity(cartItem.id, $event.target.value)
+                        handleChangeQuantity(item.id, $event.target.value)
                       "
                       class="form-control quantity"
-                      v-model="cartItem.quantity"
+                      v-model="item.quantity"
                     />
                   </div>
                 </td>
-                <td>{{ cartItem.unit_price }}</td>
-                <td>{{ cartItem.sub_total }}</td>
+                <td>{{ item.unit_price }}</td>
+                <td>{{ item.sub_total }}</td>
                 <td>
                   <button
-                    @click="handleRemoveCartItem(cartItem.id)"
+                    @click="handleRemoveCartItem(item.id)"
                     type="button"
                     class="btn btn-sm btn-danger"
                   >
@@ -285,7 +254,7 @@ onMounted(async () => {
               >
                 <option value="">Select Customer Name</option>
                 <option
-                  v-for="customer in customers"
+                  v-for="customer in customers.data"
                   :key="customer.id"
                   :value="customer.id"
                 >
@@ -334,13 +303,13 @@ onMounted(async () => {
     </div>
     <div class="col-xl-6 col-lg-7">
       <AppPanel>
-        <div class="text-center alert alert-info" v-if="isLoading">
+        <div class="text-center alert alert-info" v-if="isproductsLoading">
           Loading...
         </div>
         <div v-else>
           <div class="row">
             <div
-              v-for="product in products"
+              v-for="product in products.data"
               :key="product.id"
               class="col-sm-4 mb-3"
             >
