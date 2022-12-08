@@ -2,14 +2,16 @@
 import { useEmployeeStore } from "@/stores/employeeStore.js";
 import { useSalaryStore } from "@/stores/salaryStore.js";
 import Form from "vform";
-import { useRouter, useRoute } from "vue-router";
-import { ref, computed, onMounted } from "vue";
 import dayjs from "dayjs";
+import { useRouter, useRoute } from "vue-router";
+import { useFlash } from "@/composables/useFlash";
+import { computed, onMounted, ref } from "vue";
 
 const employeeStore = useEmployeeStore();
 const salaryStore = useSalaryStore();
 const router = useRouter();
 const route = useRoute();
+const { flashSuccess, flashError } = useFlash();
 const editMode = ref(false);
 
 const employee = computed(() => employeeStore.currentEmployee.data);
@@ -59,17 +61,11 @@ const store = async () => {
   try {
     const { data: response } = await salaryStore.addSalary(form.value);
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "salaries.pay.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: error.response.data.message,
-    });
+    flashError("Something went wrong.");
   }
 };
 
@@ -80,17 +76,11 @@ const update = async () => {
       route.params.id
     );
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "salaries.pay.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: error.response.data.message,
-    });
+    flashError("Something went wrong.");
   }
 };
 

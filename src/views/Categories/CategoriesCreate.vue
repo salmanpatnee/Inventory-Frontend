@@ -2,11 +2,13 @@
 import { useCategoryStore } from "@/stores/categoryStore.js";
 import Form from "vform";
 import { useRouter, useRoute } from "vue-router";
-import { ref, onMounted, computed } from "vue";
+import { useFlash } from "@/composables/useFlash";
+import { computed, onMounted, ref } from "vue";
 
 const categoryStore = useCategoryStore();
 const router = useRouter();
 const route = useRoute();
+const { flashSuccess, flashError } = useFlash();
 const editMode = ref(false);
 
 const category = computed(() => categoryStore.currentCategory.data);
@@ -33,17 +35,11 @@ const store = async () => {
   try {
     const { data: response } = await categoryStore.addCategory(form.value);
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "categories.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 
@@ -55,17 +51,11 @@ const update = async () => {
     );
 
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "categories.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 onMounted(() => {

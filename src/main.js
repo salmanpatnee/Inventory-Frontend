@@ -7,6 +7,7 @@ import AppPaginateDropdown from "@/components/AppPaginateDropdown.vue"
 import AppSearch from "@/components/AppSearch.vue"
 import AppTableHeader from "@/components/AppTableHeader.vue"
 import { Bootstrap4Pagination } from 'laravel-vue-pagination';
+import vSelect from "vue-select";
 
 import App from "./App.vue";
 import router from "./router";
@@ -18,7 +19,7 @@ import "./assets/vendor/jquery/jquery.min.js";
 import "./assets/vendor/bootstrap/js/bootstrap.bundle.min.js";
 import "./assets/vendor/jquery-easing/jquery.easing.min.js";
 import "./assets/js/ruang-admin.js";
-
+import "vue-select/dist/vue-select.css";
 import VueSweetalert2 from "vue-sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 
@@ -47,6 +48,7 @@ app.component(HasError.name, HasError)
 app.component(AlertError.name, AlertError)
 app.component(AlertErrors.name, AlertErrors)
 app.component(AlertSuccess.name, AlertSuccess)
+app.component("v-select", vSelect);
 
 app.use(VueSweetalert2);
 window.Swal = app.config.globalProperties.$swal;

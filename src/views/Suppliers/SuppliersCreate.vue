@@ -2,11 +2,13 @@
 import { useSupplierStore } from "@/stores/supplierStore.js";
 import Form from "vform";
 import { useRouter, useRoute } from "vue-router";
-import { ref, onMounted, computed } from "vue";
+import { useFlash } from "@/composables/useFlash";
+import { computed, onMounted, ref } from "vue";
 
 const supplierStore = useSupplierStore();
 const router = useRouter();
 const route = useRoute();
+const { flashSuccess, flashError } = useFlash();
 const editMode = ref(false);
 
 const supplier = computed(() => supplierStore.currentSupplier.data);
@@ -37,17 +39,11 @@ const store = async () => {
   try {
     const { data: response } = await supplierStore.addSupplier(form.value);
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "suppliers.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 
@@ -59,17 +55,11 @@ const update = async () => {
     );
 
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "suppliers.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 onMounted(() => {

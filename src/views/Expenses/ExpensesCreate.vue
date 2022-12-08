@@ -2,11 +2,13 @@
 import { useExpenseStore } from "@/stores/expenseStore.js";
 import Form from "vform";
 import { useRouter, useRoute } from "vue-router";
-import { ref, onMounted, computed } from "vue";
+import { useFlash } from "@/composables/useFlash";
+import { computed, onMounted, ref } from "vue";
 
 const expenseStore = useExpenseStore();
 const router = useRouter();
 const route = useRoute();
+const { flashSuccess, flashError } = useFlash();
 const editMode = ref(false);
 
 const expense = computed(() => expenseStore.currentExpense.data);
@@ -34,17 +36,11 @@ const store = async () => {
   try {
     const { data: response } = await expenseStore.addExpense(form.value);
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "expenses.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 
@@ -56,17 +52,11 @@ const update = async () => {
     );
 
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "expenses.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 onMounted(() => {

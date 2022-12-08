@@ -2,11 +2,13 @@
 import { useEmployeeStore } from "@/stores/employeeStore.js";
 import Form from "vform";
 import { useRouter, useRoute } from "vue-router";
-import { ref, onMounted, computed } from "vue";
+import { useFlash } from "@/composables/useFlash";
+import { computed, onMounted, ref } from "vue";
 
 const employeeStore = useEmployeeStore();
 const router = useRouter();
 const route = useRoute();
+const { flashSuccess, flashError } = useFlash();
 const editMode = ref(false);
 
 const employee = computed(() => employeeStore.currentEmployee.data);
@@ -38,17 +40,11 @@ const store = async () => {
   try {
     const { data: response } = await employeeStore.addEmployee(form.value);
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "employees.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 
@@ -60,17 +56,11 @@ const update = async () => {
     );
 
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "employees.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 
@@ -91,6 +81,7 @@ onMounted(() => {
     <form v-else @submit.prevent="editMode ? update() : store()">
       <div class="row">
         <div class="col">
+         
           <div class="form-group">
             <label for="name">Full Name</label>
             <input

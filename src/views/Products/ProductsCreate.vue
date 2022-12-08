@@ -4,13 +4,15 @@ import { useCategoryStore } from "@/stores/categoryStore.js";
 import { useSupplierStore } from "@/stores/supplierStore.js";
 import Form from "vform";
 import { useRouter, useRoute } from "vue-router";
-import { ref, onMounted, computed } from "vue";
+import { useFlash } from "@/composables/useFlash";
+import { computed, onMounted, ref } from "vue";
 
 const productStore = useProductStore();
 const categoryStore = useCategoryStore();
 const supplierStore = useSupplierStore();
 const router = useRouter();
 const route = useRoute();
+const { flashSuccess, flashError } = useFlash();
 const editMode = ref(false);
 
 const categories = computed(() => categoryStore.categories.data.data);
@@ -54,17 +56,11 @@ const store = async () => {
   try {
     const { data: response } = await productStore.addProduct(form.value);
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "products.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 
@@ -76,17 +72,11 @@ const update = async () => {
     );
 
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "products.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 onMounted(async () => {
@@ -136,7 +126,8 @@ onMounted(async () => {
         <div class="col">
           <div class="form-group">
             <label for="category">Category</label>
-            <select
+            <v-select v-model="form.category_id" label="name" :options="categories" :reduce="category => category.id"></v-select>
+            <!-- <select
               v-model="form.category_id"
               class="form-control"
               id="category"
@@ -149,7 +140,7 @@ onMounted(async () => {
               >
                 {{ category.name }}
               </option>
-            </select>
+            </select> -->
             <HasError :form="form" field="category_id" />
           </div>
         </div>
@@ -249,3 +240,8 @@ onMounted(async () => {
     </form>
   </AppPanel>
 </template>
+<style scoped>
+.vs__dropdown-toggle{
+  height: 43px;
+}
+</style>

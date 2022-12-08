@@ -47,7 +47,7 @@ export const useEmployeeStore = defineStore({
     },
     async updateEmployee(form, id) {
       try {
-        return await form.post(`${apiEndpoint}/${id}`);
+        return await form.put(`${apiEndpoint}/${id}`);
       } catch (error) {
         return error;
       }

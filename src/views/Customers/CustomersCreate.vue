@@ -2,11 +2,13 @@
 import { useCustomerStore } from "@/stores/customerStore.js";
 import Form from "vform";
 import { useRouter, useRoute } from "vue-router";
-import { ref, onMounted, computed } from "vue";
+import { useFlash } from "@/composables/useFlash";
+import { computed, onMounted, ref } from "vue";
 
 const customerStore = useCustomerStore();
 const router = useRouter();
 const route = useRoute();
+const { flashSuccess, flashError } = useFlash();
 const editMode = ref(false);
 
 const customer = computed(() => customerStore.currentCustomer.data);
@@ -36,17 +38,11 @@ const store = async () => {
   try {
     const { data: response } = await customerStore.addCustomer(form.value);
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "customers.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 
@@ -58,17 +54,11 @@ const update = async () => {
     );
 
     if (response.status === "success") {
-      Toast.fire({
-        icon: "success",
-        title: response.message,
-      });
+      flashSuccess(response.message);
       router.push({ name: "customers.index" });
     }
   } catch (error) {
-    Toast.fire({
-      icon: "error",
-      title: "Something went wrong.",
-    });
+    flashError("Something went wrong.");
   }
 };
 onMounted(() => {
@@ -140,7 +130,6 @@ onMounted(() => {
           </div>
         </div>
       </div>
-
       <div class="text-right">
         <Button class="btn btn-primary" :form="form">
           {{ editMode ? "Update Customer" : "Add New Customer" }}

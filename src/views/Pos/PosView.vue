@@ -15,6 +15,7 @@ const cartStore = useCartStore();
 const saleStore = useSaleStore();
 const router = useRouter();
 const { confirmAtts, flashSuccess, flashError } = useFlash();
+let modal = null;
 
 const products = computed(() => productStore.products.data);
 const isproductsLoading = computed(() => productStore.products.isLoading);
@@ -41,6 +42,16 @@ const form = ref(
     sub_total: null,
     vat: 5,
     grand_total: null,
+  })
+);
+
+const customerForm = ref(
+  new Form({
+    id: null,
+    name: null,
+    email: null,
+    phone: null,
+    address: null,
   })
 );
 
@@ -74,6 +85,8 @@ watch(displayGrandTotal, (newTotal, prevTotal) => {
   form.value.grand_total = newTotal;
 });
 
+
+
 const getProducts = async () => {
   await productStore.getProducts();
 };
@@ -85,6 +98,36 @@ const getCustomers = async () => {
 const getCartItems = async (page = 1) => {
   await cartStore.getItems();
 };
+
+const createCustomerModal = () => {
+  customerForm.value.reset();
+  jQuery("#customerModal").modal("show");
+};
+
+const handleAddCustomer = async () => {
+  try {
+    const { data: response } = await customerStore.addCustomer(
+      customerForm.value
+    );
+    if (response.status === "success") {
+      flashSuccess(response.message);
+      await getCustomers();
+      jQuery("#customerModal").modal("hide");
+      jQuery(".modal-backdrop").remove();
+      jQuery(document.body).removeClass("modal-open");
+      console.log(response.data.id);
+      form.value.customer_id = response.data.id;
+    }
+  } catch (error) {
+    modal.hide();
+    flashError("Something went wrong.");
+  }
+};
+
+const handleFullPaid = () => {
+  form.value.pay = form.value.grand_total;
+  form.value.due = form.value.grand_total - form.value.pay;
+}
 
 const handleAddToCart = async (productId) => {
   try {
@@ -146,6 +189,10 @@ onMounted(async () => {
   await getProducts();
   await getCustomers();
   await getCartItems();
+
+  modal = new Modal(document.getElementById("customerModal"), {
+    keyboard: false,
+  });
 });
 </script>
 
@@ -154,17 +201,15 @@ onMounted(async () => {
   <div class="row">
     <div class="col-xl-6 col-lg-5">
       <AppPanel>
-        <div class="text-right mb-3">
+        <!-- <div class="text-right mb-3">
           <button
             type="button"
             class="btn btn-sm btn-primary"
-            data-toggle="modal"
-            data-target="#exampleModalCenter"
-            id="#modalCenter"
+            @click="createCustomerModal"
           >
             Add Customer
           </button>
-        </div>
+        </div> -->
         <div class="text-center alert alert-info" v-if="isItemsLoading">
           Loading...
         </div>
@@ -245,8 +290,8 @@ onMounted(async () => {
         </ul>
         <div>
           <form @submit.prevent="handleCheckout">
-            <div class="form-group">
-              <label for="customer_id">Customer</label>
+            <label for="customer_id">Customer</label>
+            <div class="input-group mb-3">
               <select
                 v-model="form.customer_id"
                 id="customer_id"
@@ -261,8 +306,38 @@ onMounted(async () => {
                   {{ `${customer.name} (#${customer.id})` }}
                 </option>
               </select>
+              <div class="input-group-prepend">
+                <button
+                  @click="createCustomerModal"
+                  class="btn btn-sm btn-primary"
+                  type="button"
+                >
+                  Add Customer
+                </button>
+              </div>
             </div>
-            <div class="form-group">
+
+            <label for="pay">Pay</label>
+            <div class="input-group mb-3">
+              <input
+                type="number"
+                v-model="form.pay"
+                for="pay"
+                class="form-control"
+              />
+              <div class="input-group-prepend">
+                <button
+                  :disabled="(displayGrandTotal <= 0.00)"
+                  @click="handleFullPaid"
+                  class="btn btn-sm btn-success"
+                  type="button"
+                >
+                  Full Paid
+                </button>
+              </div>
+            </div>
+
+            <!-- <div class="form-group">
               <label for="pay">Pay</label>
               <input
                 type="number"
@@ -270,7 +345,7 @@ onMounted(async () => {
                 for="pay"
                 class="form-control"
               />
-            </div>
+            </div> -->
             <div class="form-group">
               <label for="due">Due</label>
               <input
@@ -323,38 +398,97 @@ onMounted(async () => {
   <!-- Modal Center -->
   <div
     class="modal fade"
-    id="exampleModalCenter"
+    id="customerModal"
     tabindex="-1"
     role="dialog"
-    aria-labelledby="exampleModalCenterTitle"
+    aria-labelledby="customerModalTitle"
     aria-hidden="true"
   >
-    <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
       <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="exampleModalCenterTitle">
-            Modal Vertically Centered
-          </h5>
-          <button
-            type="button"
-            class="close"
-            data-dismiss="modal"
-            aria-label="Close"
-          >
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
-        <div class="modal-body">Your Content</div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-outline-primary"
-            data-dismiss="modal"
-          >
-            Close
-          </button>
-          <button type="button" class="btn btn-primary">Save changes</button>
-        </div>
+        <form @submit.prevent="handleAddCustomer">
+          <div class="modal-header">
+            <h5 class="modal-title" id="customerModalTitle">
+              Add New Customer
+            </h5>
+            <button
+              type="button"
+              class="close"
+              data-dismiss="modal"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <div class="row">
+              <div class="col">
+                <div class="form-group">
+                  <label for="name">Full Name</label>
+                  <input
+                    v-model="customerForm.name"
+                    type="text"
+                    class="form-control"
+                    id="name"
+                  />
+                  <HasError :form="customerForm" field="name" />
+                </div>
+              </div>
+              <div class="col">
+                <div class="form-group">
+                  <label for="email">Email Address</label>
+                  <input
+                    v-model="customerForm.email"
+                    type="email"
+                    class="form-control"
+                    id="email"
+                  />
+                  <HasError :form="customerForm" field="email" />
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <div class="form-group">
+                  <label for="phone">Phone</label>
+                  <input
+                    v-model="customerForm.phone"
+                    type="tel"
+                    class="form-control"
+                    id="phone"
+                  />
+                  <HasError :form="customerForm" field="phone" />
+                </div>
+              </div>
+              <div class="col">
+                <div class="form-group">
+                  <label for="address">Address</label>
+                  <input
+                    v-model="customerForm.address"
+                    type="text"
+                    class="form-control"
+                    id="address"
+                  />
+                  <HasError :form="customerForm" field="address" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-outline-primary"
+              data-dismiss="modal"
+            >
+              Close
+            </button>
+            <Button class="btn btn-primary" :form="customerForm">
+              Add New Customer
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
