@@ -3,6 +3,8 @@ import { useAuthStore } from "../stores/auth";
 import DefaultView from "@/views/DefaultView.vue";
 import AuthView from "@/views/AuthView.vue";
 import DashboardView from "@/views/DashboardView.vue";
+import UsersIndex from "@/views/Users/UsersIndex.vue";
+import UsersCreate from "@/views/Users/UsersCreate.vue";
 import EmployeesIndex from "@/views/Employees/EmployeesIndex.vue";
 import EmployeesCreate from "@/views/Employees/EmployeesCreate.vue";
 import SuppliersIndex from "@/views/Suppliers/SuppliersIndex.vue";
@@ -25,7 +27,7 @@ import SalesIndex from "@/views/Sales/SalesIndex.vue";
 import SalesShow from "@/views/Sales/SalesShow.vue";
 
 import PosView from "@/views/Pos/PosView.vue";
-import RegisterView from "@/views/RegisterView.vue";
+// import RegisterView from "@/views/RegisterView.vue";
 import LoginView from "@/views/LoginView.vue";
 
 const router = createRouter({
@@ -38,6 +40,16 @@ const router = createRouter({
       meta: { requiresAuth: true },
       children: [
         { path: "/dashboard", name: "dashboard", component: DashboardView },
+        {
+          path: "/users",
+          name: "users.index",
+          component: UsersIndex,
+        },
+        {
+          path: "/users/create",
+          name: "users.create",
+          component: UsersCreate,
+        },
         {
           path: "/employees",
           name: "employees.index",
@@ -167,7 +179,7 @@ const router = createRouter({
       component: AuthView,
       meta: { isGuest: true },
       children: [
-        { path: "/register", name: "register", component: RegisterView },
+        // { path: "/register", name: "register", component: RegisterView },
         { path: "/login", name: "login", component: LoginView },
       ],
     },

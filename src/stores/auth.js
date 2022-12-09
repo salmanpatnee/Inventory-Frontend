@@ -15,7 +15,7 @@ export const useAuthStore = defineStore({
   actions: {
     async register(data) {
       const response = await http.post(`/api/register`, data);
-      this.setUser(response.data);
+      // this.setUser(response.data);
       return response;
     },
     async login(user) {

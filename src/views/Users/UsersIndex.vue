@@ -1,10 +1,10 @@
 <script setup>
-import { useEmployeeStore } from "@/stores/employeeStore.js";
+import { useUserStore } from "@/stores/userStore.js";
 import { useRouter } from "vue-router";
 import { useFlash } from "@/composables/useFlash";
 import { computed, onMounted, ref, watch } from "vue";
 
-const employeeStore = useEmployeeStore();
+const userStore = useUserStore();
 const router = useRouter();
 const { confirmAtts, flashSuccess, flashError } = useFlash();
 const paginate = ref(10);
@@ -15,76 +15,75 @@ const columns = [
   { path: "", label: "#" },
   { path: "name", label: "Name", sortable: true },
   { path: "email", label: "Email", sortable: true },
-  { path: "salary", label: "Salary", sortable: true },
   { path: "joining_date", label: "Joining Date", sortable: true },
+  { path: "active", label: "Status" },
+  { path: "last_login_at", label: "Last Login" },
   { path: "", label: "Action" },
 ];
 
-const employees = computed(() => employeeStore.employees.data);
-const isLoading = computed(() => employeeStore.employees.isLoading);
+const users = computed(() => userStore.users.data);
+const isLoading = computed(() => userStore.users.isLoading);
 
 watch(
   () => paginate.value,
   (newVal, prevVal) => {
-    getEmployees();
+    getUsers();
   }
 );
 watch(
   () => search.value,
   (newTerm, prevTerm) => {
-    getEmployees();
+    getUsers();
   }
 );
 
-const getEmployees = async (page = 1) => {
+const getUsers = async (page = 1) => {
   const { order, path } = sortColumn.value;
   const params = `?page=${page}&paginate=${paginate.value}&search=${search.value}&sortOrder=${order}&orderBy=${path}`;
-  await employeeStore.getEmployees(params);
+  await userStore.getUsers(params);
 };
 
 const handleDelete = async (id) => {
   //Removing from frontend
-  const originalEmployees = employees.value.data;
-  employees.value.data = originalEmployees.filter(
-    (employee) => employee.id !== id
-  );
+  const originalUsers = users.value.data;
+  users.value.data = originalUsers.filter((user) => user.id !== id);
 
   Swal.fire(confirmAtts())
     .then(async (result) => {
       if (result.isConfirmed) {
-        const { data: response } = await employeeStore.deleteEmployee(id);
+        const { data: response } = await userStore.deleteUser(id);
         if (response.status === "success") flashSuccess(response.message);
       } else {
-        employees.value.data = originalEmployees;
+        users.value.data = originalUsers;
       }
     })
     .catch((error) => flashError());
 };
 
 const handleEdit = async (id) => {
-  router.push({ name: "employees.edit", params: { id: id } });
+  router.push({ name: "users.edit", params: { id: id } });
 };
 
 const handleSort = async (sort) => {
   sortColumn.value.path = sort.path;
   sortColumn.value.order = sort.order;
-  await getEmployees();
+  await getUsers();
 };
 
 onMounted(() => {
-  getEmployees();
+  getUsers();
 });
 </script>
 <template>
-  <AppPageHeader title="All Employees">
+  <AppPageHeader title="All Users">
     <router-link
-      :to="{ name: 'employees.create' }"
+      :to="{ name: 'users.create' }"
       class="btn btn-primary btn-icon-split"
     >
       <span class="icon text-white-50">
         <i class="fas fa-plus-circle"></i>
       </span>
-      <span class="text">Add New Employee</span>
+      <span class="text">Add New User</span>
     </router-link>
   </AppPageHeader>
 
@@ -112,22 +111,31 @@ onMounted(() => {
             :sortColumn="sortColumn"
           />
           <tbody>
-            <tr v-for="(employee, index) in employees.data" :key="employee.id">
+            <tr v-for="(user, index) in users.data" :key="user.id">
               <td>{{ index + 1 }}</td>
-              <td>{{ employee.name }}</td>
-              <td>{{ employee.email }}</td>
-              <td>{{ employee.salary }}</td>
-              <td><AppDate :timestamp="employee.joining_date" /></td>
+              <td>{{ user.name }}</td>
+              <td>{{ user.email }}</td>
+              <td><AppDate :timestamp="user.joining_date" /></td>
+              <td>
+                <span
+                  :class="user.active ? 'badge-success' : 'badge-warning'"
+                  class="badge text-capitalize"
+                  >{{ user.active ? "Active" : "Inactive" }}</span
+                >
+              </td>
+              <td>
+                {{ user.last_login }}
+              </td>
               <td class="text-center">
                 <button
-                  @click="handleEdit(employee.id)"
+                  @click="handleEdit(user.id)"
                   type="button"
                   class="btn btn-info btn-sm mr-2"
                 >
                   <i class="fas fa-edit"></i>
                 </button>
                 <button
-                  @click="handleDelete(employee.id)"
+                  @click="handleDelete(user.id)"
                   type="button"
                   class="btn btn-danger btn-sm"
                 >
@@ -139,10 +147,7 @@ onMounted(() => {
         </table>
       </div>
       <div class="d-flex justify-content-center mt-4">
-        <AppPagination
-          :data="employees"
-          @pagination-change-page="getEmployees"
-        />
+        <AppPagination :data="users" @pagination-change-page="getUsers" />
       </div>
     </div>
   </AppPanel>

@@ -67,10 +67,10 @@ const handleLogin = async () => {
   </form>
 
   <hr />
-  <div class="text-center">
+  <!-- <div class="text-center">
     <router-link :to="{ name: 'register' }" class="font-weight-bold small"
       >Create an Account?</router-link
     >
-  </div>
-  <div class="text-center"></div>
+  </div> -->
+  <!-- <div class="text-center"></div> -->
 </template>

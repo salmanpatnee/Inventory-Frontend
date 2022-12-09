@@ -1,24 +1,28 @@
 <script setup>
-import { useEmployeeStore } from "@/stores/employeeStore.js";
+import { useAuthStore } from "@/stores/auth.js";
+import { useUserStore } from "@/stores/userStore.js";
 import Form from "vform";
 import { useRouter, useRoute } from "vue-router";
 import { useFlash } from "@/composables/useFlash";
 import { computed, onMounted, ref } from "vue";
 
-const employeeStore = useEmployeeStore();
+const authStore = useAuthStore();
+const userStore = useUserStore();
 const router = useRouter();
 const route = useRoute();
 const { flashSuccess, flashError } = useFlash();
 const editMode = ref(false);
 
-const employee = computed(() => employeeStore.currentEmployee.data);
-const isLoading = computed(() => employeeStore.currentEmployee.isLoading);
+const user = computed(() => userStore.currentUser.data);
+const isLoading = computed(() => userStore.currentUser.isLoading);
 
 const form = ref(
   new Form({
     id: null,
     name: null,
     email: null,
+    password: "",
+    password_confirmation: "",
     phone: null,
     address: null,
     salary: null,
@@ -27,21 +31,21 @@ const form = ref(
 );
 
 const pageHeaderTitle = computed(() => {
-  return !editMode.value ? "Add New Employee" : "Edit Employee";
+  return !editMode.value ? "Add New User" : "Edit User";
 });
 
-const getEmployee = async () => {
+const getUser = async () => {
   editMode.value = true;
-  await employeeStore.getEmployee(route.params.id);
+  await userStore.getUser(route.params.id);
   form.value.fill(employee.value);
 };
 
 const store = async () => {
   try {
-    const { data: response } = await employeeStore.addEmployee(form.value);
+    const { data: response } = await authStore.register(form.value);
     if (response.status === "success") {
       flashSuccess(response.message);
-      router.push({ name: "employees.index" });
+      router.push({ name: "users.index" });
     }
   } catch (error) {
     flashError("Something went wrong.");
@@ -50,14 +54,14 @@ const store = async () => {
 
 const update = async () => {
   try {
-    const { data: response } = await employeeStore.updateEmployee(
+    const { data: response } = await userStore.updateUser(
       form.value,
       route.params.id
     );
 
     if (response.status === "success") {
       flashSuccess(response.message);
-      router.push({ name: "employees.index" });
+      router.push({ name: "users.index" });
     }
   } catch (error) {
     flashError("Something went wrong.");
@@ -66,20 +70,20 @@ const update = async () => {
 
 onMounted(() => {
   if (route.params.id) {
-    getEmployee();
+    getUser();
   }
 });
 </script>
 <template>
   <AppPageHeader :title="pageHeaderTitle">
     <router-link
-      :to="{ name: 'employees.index' }"
+      :to="{ name: 'users.index' }"
       class="btn btn-primary btn-icon-split"
     >
       <span class="icon text-white-50">
         <i class="fas fa-arrow-left"></i>
       </span>
-      <span class="text">All Employees</span>
+      <span class="text">All Users</span>
     </router-link>
   </AppPageHeader>
   <AppPanel>
@@ -87,7 +91,6 @@ onMounted(() => {
     <form v-else @submit.prevent="editMode ? update() : store()">
       <div class="row">
         <div class="col">
-         
           <div class="form-group">
             <label for="name">Full Name</label>
             <input
@@ -109,6 +112,30 @@ onMounted(() => {
               id="email"
             />
             <HasError :form="form" field="email" />
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              class="form-control"
+              id="password"
+              v-model="form.password"
+            />
+          </div>
+        </div>
+        <div class="col">
+          <div class="form-group">
+            <label for="password_confirmation">Repeat Password</label>
+            <input
+              type="password"
+              class="form-control"
+              id="password_confirmation"
+              v-model="form.password_confirmation"
+            />
           </div>
         </div>
       </div>
@@ -166,7 +193,7 @@ onMounted(() => {
       </div>
       <div class="text-right">
         <Button class="btn btn-primary" :form="form">
-          {{ editMode ? "Update Employee" : "Add New Employee" }}
+          {{ editMode ? "Update User" : "Add New User" }}
         </Button>
       </div>
     </form>
