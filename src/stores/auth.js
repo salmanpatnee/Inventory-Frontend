@@ -13,10 +13,12 @@ export const useAuthStore = defineStore({
     },
   }),
   actions: {
-    async register(data) {
-      const response = await http.post(`/api/register`, data);
-      // this.setUser(response.data);
-      return response;
+    async register(form) {
+      try {
+        return await form.post(`/api/register`);
+      } catch (error) {
+        return error;
+      }
     },
     async login(user) {
       const response = await http.post(`/api/login`, user);

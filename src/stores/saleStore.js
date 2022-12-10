@@ -38,6 +38,17 @@ export const useSaleStore = defineStore({
         this.currentSale.isLoading = false;
       }
     },
+    async getLastSale() {
+      try {
+        this.currentSale.isLoading = true;
+        const { data } = await http.get(`/api/sales/last_sale`);
+        this.currentSale.data = data.data;
+        this.currentSale.isLoading = false;
+      } catch (error) {
+        console.log({ error });
+        this.currentSale.isLoading = false;
+      }
+    },
     async addSale(form) {
       try {
         return await form.post(apiEndpoint);

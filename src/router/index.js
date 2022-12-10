@@ -10,7 +10,7 @@ import EmployeesCreate from "@/views/Employees/EmployeesCreate.vue";
 import SuppliersIndex from "@/views/Suppliers/SuppliersIndex.vue";
 import SuppliersCreate from "@/views/Suppliers/SuppliersCreate.vue";
 import CategoriesIndex from "@/views/Categories/CategoriesIndex.vue";
-import CategoriesCreate from "@/views/Categories/CategoriesCreate.vue";
+// import CategoriesCreate from "@/views/Categories/CategoriesCreate.vue";
 import ProductsIndex from "@/views/Products/ProductsIndex.vue";
 import ProductsCreate from "@/views/Products/ProductsCreate.vue";
 import ExpensesIndex from "@/views/Expenses/ExpensesIndex.vue";
@@ -27,6 +27,7 @@ import SalesIndex from "@/views/Sales/SalesIndex.vue";
 import SalesShow from "@/views/Sales/SalesShow.vue";
 
 import PosView from "@/views/Pos/PosView.vue";
+import PosV2View from "@/views/Pos/PosV2View.vue";
 // import RegisterView from "@/views/RegisterView.vue";
 import LoginView from "@/views/LoginView.vue";
 
@@ -48,6 +49,11 @@ const router = createRouter({
         {
           path: "/users/create",
           name: "users.create",
+          component: UsersCreate,
+        },
+        {
+          path: "/users/edit/:id",
+          name: "users.edit",
           component: UsersCreate,
         },
         {
@@ -87,16 +93,16 @@ const router = createRouter({
           name: "categories.index",
           component: CategoriesIndex,
         },
-        {
-          path: "/categories/create",
-          name: "categories.create",
-          component: CategoriesCreate,
-        },
-        {
-          path: "/categories/edit/:id",
-          name: "categories.edit",
-          component: CategoriesCreate,
-        },
+        // {
+        //   path: "/categories/create",
+        //   name: "categories.create",
+        //   component: CategoriesCreate,
+        // },
+        // {
+        //   path: "/categories/edit/:id",
+        //   name: "categories.edit",
+        //   component: CategoriesCreate,
+        // },
 
         { path: "/products", name: "products.index", component: ProductsIndex },
         {
@@ -111,6 +117,7 @@ const router = createRouter({
         },
 
         { path: "/pos", name: "pos.index", component: PosView },
+        { path: "/pos/v2", name: "pos.v2.index", component: PosV2View },
 
         { path: "/expenses", name: "expenses.index", component: ExpensesIndex },
         {

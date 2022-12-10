@@ -25,6 +25,12 @@ import NavItem from "@/components/NavItem.vue";
         <span>POS</span>
       </router-link>
     </li>
+    <li class="nav-item active">
+      <router-link :to="{ name: 'pos.v2.index' }" class="nav-link">
+        <i class="fa fa-cart-arrow-down" aria-hidden="true"></i>
+        <span>POS V2</span>
+      </router-link>
+    </li>
     <hr class="sidebar-divider" />
     <nav-item id="user" iconClass="fa-user-friends" label="Users">
       <router-link :to="{ name: 'users.create' }" class="collapse-item"
@@ -62,9 +68,6 @@ import NavItem from "@/components/NavItem.vue";
     </nav-item>
 
     <nav-item id="category" iconClass="fa-th-large" label="Categories">
-      <router-link :to="{ name: 'categories.create' }" class="collapse-item"
-        >Add Category</router-link
-      >
       <router-link :to="{ name: 'categories.index' }" class="collapse-item"
         >All Categories</router-link
       >

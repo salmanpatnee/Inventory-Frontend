@@ -130,10 +130,11 @@ onMounted(() => {
                 <button
                   @click="handleEdit(user.id)"
                   type="button"
-                  class="btn btn-info btn-sm mr-2"
+                  class="btn btn-primary btn-sm mr-2"
                 >
                   <i class="fas fa-edit"></i>
                 </button>
+        
                 <button
                   @click="handleDelete(user.id)"
                   type="button"

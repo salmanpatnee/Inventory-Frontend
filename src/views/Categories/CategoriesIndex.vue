@@ -1,24 +1,33 @@
 <script setup>
 import { useCategoryStore } from "@/stores/categoryStore.js";
-import { useRouter } from "vue-router";
+import Form from "vform";
 import { useFlash } from "@/composables/useFlash";
 import { computed, onMounted, ref, watch } from "vue";
 
 const categoryStore = useCategoryStore();
-const router = useRouter();
 const { confirmAtts, flashSuccess, flashError } = useFlash();
+const editMode = ref(false);
 const paginate = ref(10);
 const search = ref("");
 const sortColumn = ref({ path: "name", order: "asc" });
 
+const form = ref(
+  new Form({
+    id: null,
+    name: null,
+  })
+);
+
 const columns = [
   { path: "#", label: "S.No" },
   { path: "name", label: "Name", sortable: true },
+  { path: "", label: "Products Count" },
   { path: "", label: "Action" },
 ];
 
 const categories = computed(() => categoryStore.categories.data);
 const isLoading = computed(() => categoryStore.categories.isLoading);
+const category = computed(() => categoryStore.currentCategory.data);
 
 watch(
   () => paginate.value,
@@ -38,6 +47,42 @@ const getCategories = async (page = 1) => {
   const params = `?page=${page}&paginate=${paginate.value}&search=${search.value}&sortOrder=${order}&orderBy=${path}`;
   await categoryStore.getCategories(params);
 };
+const getCategory = async (id) => {
+  editMode.value = true;
+  await categoryStore.getCategory(id);
+  form.value.fill(category.value);
+  jQuery("#categoryModal").modal("show");
+};
+
+const store = async () => {
+  try {
+    const { data: response } = await categoryStore.addCategory(form.value);
+    if (response.status === "success") {
+      jQuery("#categoryModal").modal("hide");
+      flashSuccess(response.message);
+      await getCategories();
+    }
+  } catch (error) {
+    flashError("Something went wrong.");
+  }
+};
+
+const update = async () => {
+  try {
+    const { data: response } = await categoryStore.updateCategory(
+      form.value,
+      form.value.id
+    );
+
+    if (response.status === "success") {
+      jQuery("#categoryModal").modal("hide");
+      flashSuccess(response.message);
+      await getCategories();
+    }
+  } catch (error) {
+    flashError("Something went wrong.");
+  }
+};
 const handleDelete = async (id) => {
   const originalCategories = categories.value.data;
   categories.value.data = originalCategories.filter(
@@ -48,8 +93,7 @@ const handleDelete = async (id) => {
     .then(async (result) => {
       if (result.isConfirmed) {
         const { data: response } = await categoryStore.deleteCategory(id);
-        if (response.status === "success")
-        flashSuccess(response.message)
+        if (response.status === "success") flashSuccess(response.message);
       } else {
         categories.value.data = originalCategories;
       }
@@ -58,7 +102,7 @@ const handleDelete = async (id) => {
 };
 
 const handleEdit = async (id) => {
-  router.push({ name: "categories.edit", params: { id: id } });
+  await getCategory(id);
 };
 
 const handleSort = async (sort) => {
@@ -67,15 +111,24 @@ const handleSort = async (sort) => {
   await getCategories();
 };
 
-onMounted(() => {
-  getCategories();
+onMounted(async () => {
+  await getCategories();
 });
 </script>
 <template>
   <AppPageHeader title="All Categories">
-    <router-link :to="{ name: 'categories.create' }" class="btn btn-primary">
-      Add New Category
-    </router-link>
+    <button
+      type="button"
+      class="btn btn-primary btn-icon-split"
+      data-toggle="modal"
+      data-target="#categoryModal"
+      id="#modalCenter"
+    >
+      <span class="icon text-white-50">
+        <i class="fas fa-plus-circle"></i>
+      </span>
+      <span class="text">Add New Category</span>
+    </button>
   </AppPageHeader>
 
   <AppPanel>
@@ -100,6 +153,7 @@ onMounted(() => {
           <tr v-for="(category, index) in categories.data" :key="category.id">
             <td>{{ index + 1 }}</td>
             <td>{{ category.name }}</td>
+            <td>{{ category.products_count }}</td>
             <td class="text-center">
               <button
                 @click="handleEdit(category.id)"
@@ -127,4 +181,62 @@ onMounted(() => {
       />
     </div>
   </AppPanel>
+
+  <!-- Modal Center -->
+  <div
+    class="modal fade"
+    id="categoryModal"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="categoryModalTitle"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <form @submit.prevent="editMode ? update() : store()">
+          <div class="modal-header bg-primary text-light">
+            <h5 class="modal-title" id="categoryModalTitle">
+              Add Category
+            </h5>
+            <button
+              type="button"
+              class="close text-light"
+              data-dismiss="modal"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col">
+                <div class="form-group">
+                  <label for="name">Name</label>
+                  <input
+                    v-model="form.name"
+                    type="text"
+                    class="form-control"
+                    id="name"
+                  />
+                  <HasError :form="form" field="name" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-outline-primary"
+              data-dismiss="modal"
+            >
+              Close
+            </button>
+            <Button class="btn btn-primary" :form="form">
+              {{ editMode ? "Update" : "Add" }}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 </template>

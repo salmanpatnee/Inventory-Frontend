@@ -31,6 +31,7 @@ const form = ref(
     cost: null,
     price: null,
     quantity: null,
+    alert_quantity: null,
     purchase_date: null,
   })
 );
@@ -126,8 +127,8 @@ onMounted(async () => {
         <div class="col">
           <div class="form-group">
             <label for="category">Category</label>
-            <v-select v-model="form.category_id" label="name" :options="categories" :reduce="category => category.id"></v-select>
-            <!-- <select
+            <!-- <v-select v-model="form.category_id" label="name" :options="categories" :reduce="category => category.id"></v-select> -->
+            <select
               v-model="form.category_id"
               class="form-control"
               id="category"
@@ -140,7 +141,7 @@ onMounted(async () => {
               >
                 {{ category.name }}
               </option>
-            </select> -->
+            </select>
             <HasError :form="form" field="category_id" />
           </div>
         </div>
@@ -220,6 +221,18 @@ onMounted(async () => {
       <div class="row">
         <div class="col">
           <div class="form-group">
+            <label for="alert_quantity">Alert Quantity</label>
+            <input
+              v-model="form.alert_quantity"
+              type="number"
+              class="form-control"
+              id="alert_quantity"
+            />
+            <HasError :form="form" field="alert_quantity" />
+          </div>
+        </div>
+        <div class="col">
+          <div class="form-group">
             <label for="purchase_date">Purchase Date</label>
             <input
               v-model="form.purchase_date"
@@ -230,7 +243,7 @@ onMounted(async () => {
             <HasError :form="form" field="purchase_date" />
           </div>
         </div>
-        <div class="col"></div>
+        
       </div>
       <div class="text-right">
         <Button class="btn btn-primary" :form="form">
@@ -241,7 +254,7 @@ onMounted(async () => {
   </AppPanel>
 </template>
 <style scoped>
-.vs__dropdown-toggle{
+.vs__dropdown-toggle {
   height: 43px;
 }
 </style>

@@ -27,6 +27,7 @@ const form = ref(
     address: null,
     salary: null,
     joining_date: null,
+    active: null,
   })
 );
 
@@ -37,7 +38,7 @@ const pageHeaderTitle = computed(() => {
 const getUser = async () => {
   editMode.value = true;
   await userStore.getUser(route.params.id);
-  form.value.fill(employee.value);
+  form.value.fill(user.value);
 };
 
 const store = async () => {
@@ -125,6 +126,11 @@ onMounted(() => {
               id="password"
               v-model="form.password"
             />
+            <HasError :form="form" field="password" />
+            <small v-show="editMode"
+              >Leave password field blank if you don't want to update
+              password</small
+            >
           </div>
         </div>
         <div class="col">
@@ -136,6 +142,7 @@ onMounted(() => {
               id="password_confirmation"
               v-model="form.password_confirmation"
             />
+            <HasError :form="form" field="password_confirmation" />
           </div>
         </div>
       </div>
@@ -191,6 +198,19 @@ onMounted(() => {
           </div>
         </div>
       </div>
+      <div class="row">
+        <div class="col">
+          <div class="form-check form-switch">
+            <input
+              v-model="form.active"
+              class="form-check-input"
+              type="checkbox"
+              id="active"
+            />
+            <label class="form-check-label" for="active">Active</label>
+          </div>
+        </div>
+      </div>
       <div class="text-right">
         <Button class="btn btn-primary" :form="form">
           {{ editMode ? "Update User" : "Add New User" }}
@@ -199,3 +219,15 @@ onMounted(() => {
     </form>
   </AppPanel>
 </template>
+<style scoped>
+.form-check {
+  line-height: 1.9em;
+}
+.form-check-input {
+  width: 20px;
+  height: 20px;
+}
+label.form-check-label {
+  margin-left: 0.5em;
+}
+</style>
