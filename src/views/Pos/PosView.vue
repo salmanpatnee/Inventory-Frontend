@@ -128,11 +128,16 @@ const handleFullPaid = () => {
 };
 
 const handleAddToCart = async (product) => {
-  const p = items.value.filter((item) => item.product.id === product.id);
-  if (p[0].quantity + 1 > product.quantity) {
-    flashError(`Product is out of stock you can max order ${product.quantity}`);
-    return;
-  }
+  
+  items.value.map(item => {
+    if(item.product.id === product.id) {
+      if(item.quantity + 1 > product.quantity){
+        flashError(`Product is out of stock you can max order ${product.quantity}`);
+        return;
+      }
+    }
+  })
+
 
   try {
     form.value.product_id = product.id;
@@ -147,6 +152,7 @@ const handleAddToCart = async (product) => {
     flashError("Something went wrong.");
   }
 };
+
 
 const handleOutOfStockItem = () => {
   flashError("Item is out of stock");
