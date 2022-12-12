@@ -85,8 +85,6 @@ watch(displayGrandTotal, (newTotal, prevTotal) => {
   form.value.grand_total = newTotal;
 });
 
-
-
 const getProducts = async () => {
   await productStore.getProducts();
 };
@@ -127,17 +125,31 @@ const handleAddCustomer = async () => {
 const handleFullPaid = () => {
   form.value.pay = form.value.grand_total;
   form.value.due = form.value.grand_total - form.value.pay;
-}
+};
 
-const handleAddToCart = async (productId) => {
+const handleAddToCart = async (product) => {
+  const p = items.value.filter((item) => item.product.id === product.id);
+  if (p[0].quantity + 1 > product.quantity) {
+    flashError(`Product is out of stock you can max order ${product.quantity}`);
+    return;
+  }
+
   try {
-    form.value.product_id = productId;
+    form.value.product_id = product.id;
     const { data: response } = await cartStore.addItem(form.value);
-    getCartItems();
-    flashSuccess(response.message);
+    if (response.status === "success") {
+      getCartItems();
+      flashSuccess(response.message);
+    } else {
+      flashError(response.message);
+    }
   } catch (error) {
     flashError("Something went wrong.");
   }
+};
+
+const handleOutOfStockItem = () => {
+  flashError("Item is out of stock");
 };
 
 const handleRemoveCartItem = async (id) => {
@@ -189,10 +201,6 @@ onMounted(async () => {
   await getProducts();
   await getCustomers();
   await getCartItems();
-
-  modal = new Modal(document.getElementById("customerModal"), {
-    keyboard: false,
-  });
 });
 </script>
 
@@ -388,7 +396,11 @@ onMounted(async () => {
               :key="product.id"
               class="col-sm-4 mb-3"
             >
-              <product-card :product="product" @add-to-cart="handleAddToCart" />
+              <product-card
+                :product="product"
+                @add-to-cart="handleAddToCart"
+                @item-out-of-stock="handleOutOfStockItem"
+              />
             </div>
           </div>
         </div>

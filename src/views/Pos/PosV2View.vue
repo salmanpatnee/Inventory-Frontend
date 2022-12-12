@@ -8,6 +8,7 @@ import { useRouter } from "vue-router";
 import { useFlash } from "@/composables/useFlash";
 import Form from "vform";
 import { computed, onMounted, ref, watch } from "vue";
+import ProductRow from "@/components/ProductRow.vue";
 
 const authStore = useAuthStore();
 const productStore = useProductStore();
@@ -31,7 +32,7 @@ const items = computed(() => cartStore.items.data);
 const isItemsLoading = computed(() => cartStore.items.isLoading);
 const sale = computed(() => saleStore.currentSale.data);
 const invoiceNo = computed(() => {
-  return sale ? parseInt(sale.value.invoice_no) + 1 : "1001";
+  return saleStore.invoiceNo.data;
 });
 
 const columns = [
@@ -43,7 +44,6 @@ const columns = [
 ];
 
 const productColumns = [
-  { path: "#", label: "#" },
   { path: "name", label: "Name", sortable: true },
   { path: "price", label: "Price", sortable: true },
   { path: "quantity", label: "Stock", sortable: true },
@@ -52,7 +52,7 @@ const productColumns = [
 
 const form = ref(
   new Form({
-    seller: user.value.name, 
+    seller: user.value.name,
     invoice_no: invoiceNo.value,
     product_id: null,
     customer_id: "",
@@ -124,8 +124,8 @@ const getProducts = async (page = 1) => {
   await productStore.getProducts(params);
 };
 
-const getTheLastSale = async () => {
-  await saleStore.getLastSale();
+const getInvoiceNo = async () => {
+  await saleStore.getInvoiceNo();
 };
 
 const handleSort = async (sort) => {
@@ -172,17 +172,32 @@ const handleFullPaid = () => {
   form.value.due = form.value.grand_total - form.value.pay;
 };
 
-const handleAddToCart = async (productId) => {
+const handleAddToCart = async (product) => {
+  
+  const p = items.value.filter((item) => item.product.id === product.id);
+
+  if (p[0].quantity + 1 > product.quantity) {
+    flashError(`Product is out of stock you can max order ${product.quantity}`);
+    return;
+  }
+
   try {
-    form.value.product_id = productId;
+    form.value.product_id = product.id;
     const { data: response } = await cartStore.addItem(form.value);
-    getCartItems();
-    flashSuccess(response.message);
+    if (response.status === "success") {
+      getCartItems();
+      flashSuccess(response.message);
+    } else {
+      flashError(response.message);
+    }
   } catch (error) {
     flashError("Something went wrong.");
   }
 };
 
+const handleOutOfStockItem = () => {
+  flashError("Item is out of stock");
+};
 const handleRemoveCartItem = async (id) => {
   const originalCartItems = items.value;
 
@@ -229,7 +244,7 @@ const handleCheckout = async () => {
 };
 
 onMounted(async () => {
-  await getTheLastSale();
+  await getInvoiceNo();
   await getProducts();
   await getCustomers();
   await getCartItems();
@@ -238,6 +253,7 @@ onMounted(async () => {
 
 <template>
   <AppPageHeader title="POS"> </AppPageHeader>
+
   <div class="row">
     <div class="col-xl-6 col-lg-5">
       <AppPanel>
@@ -262,7 +278,7 @@ onMounted(async () => {
           </div>
           <input
             type="text"
-            readonly 
+            readonly
             class="form-control"
             v-model="form.invoice_no"
           />
@@ -415,21 +431,13 @@ onMounted(async () => {
               :sortColumn="sortColumn"
             />
             <tbody>
-              <tr v-for="(product, index) in products.data" :key="product.id">
-                <td>{{ index + 1 }}</td>
-                <td>{{ product.name }}</td>
-                <td>{{ product.price }}</td>
-                <td>{{ product.quantity }}</td>
-                <td class="text-center">
-                  <button
-                    @click="handleEdit(product.id)"
-                    type="button"
-                    class="btn btn-sm btn-primary"
-                  >
-                    <div class="fa fa-plus"></div>
-                  </button>
-                </td>
-              </tr>
+              <product-row
+                v-for="product in products.data"
+                :key="product.id"
+                :product="product"
+                @add-to-cart="handleAddToCart"
+                @item-out-of-stock="handleOutOfStockItem"
+              />
             </tbody>
           </table>
         </div>

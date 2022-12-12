@@ -6,11 +6,18 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["addToCart"]);
+const emit = defineEmits(["addToCart", "itemOutOfStock"]);
 </script>
 
 <template>
-  <div class="card border product" @click="$emit('addToCart', product.id)">
+  <div
+    class="card border product"
+    @click="
+      product.quantity
+        ? $emit('addToCart', product)
+        : $emit('itemOutOfStock')
+    "
+  >
     <img
       class="card-img-top"
       src="/src/assets/img/product.png"

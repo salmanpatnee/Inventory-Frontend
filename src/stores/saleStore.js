@@ -13,7 +13,11 @@ export const useSaleStore = defineStore({
     currentSale: {
       isLoading: false,
       data: {},
-    },
+    }, 
+    invoiceNo: {
+      isLoading: false,
+      data: "",
+    }
   }),
   actions: {
     async getSales(params = "") {
@@ -38,15 +42,15 @@ export const useSaleStore = defineStore({
         this.currentSale.isLoading = false;
       }
     },
-    async getLastSale() {
+    async getInvoiceNo() {
       try {
-        this.currentSale.isLoading = true;
-        const { data } = await http.get(`/api/sales/last_sale`);
-        this.currentSale.data = data.data;
-        this.currentSale.isLoading = false;
+        this.invoiceNo.isLoading = true;
+        const { data } = await http.get(`/api/sales/get_invoice_no`);
+        this.invoiceNo.data = data;
+        this.invoiceNo.isLoading = false;
       } catch (error) {
         console.log({ error });
-        this.currentSale.isLoading = false;
+        this.invoiceNo.isLoading = false;
       }
     },
     async addSale(form) {
