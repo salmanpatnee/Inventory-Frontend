@@ -178,6 +178,7 @@ const router = createRouter({
 
         { path: "/sales", name: "sales.index", component: SalesIndex },
         { path: "/sales/:id", name: "sales.show", component: SalesShow },
+        { path: "/sales/edit/:id", name: "sales.edit", component: PosV2View },
       ],
     },
     {

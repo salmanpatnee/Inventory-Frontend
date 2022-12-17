@@ -11,19 +11,18 @@ let emit = defineEmits(["update:modelValue"]);
 </script>
 
 <template>
-  <div class="align-items-center d-flex form-group row">
-    <label for="search" class="col-form-label col-sm-4 text-right">
-      {{ label }}
-    </label>
-    <div class="col-sm-8">
-        <input
-      id="search"
+  <div class="input-group mb-3">
+    <div class="input-group-prepend">
+      <span class="input-group-text" id="seller"
+        ><i class="fa fa-search"></i
+      ></span>
+    </div>
+    <input
       type="text"
       @keyup="emit('update:modelValue', $event.target.value)"
       :value="modelValue"
+      :placeholder="label"
       class="form-control form-control-sm"
     />
-    </div>
-   
   </div>
 </template>

@@ -13,9 +13,44 @@ export const useCartStore = defineStore({
     item: {
       isLoading: false,
       data: {},
-    },
+    }, 
+    vat: 5
   }),
+  getters: {
+    totalItemQuatities: (state) => {
+      let totalItemQuatities = 0;
+      state.items.data.map(
+        (item) => (totalItemQuatities += parseInt(item.qty))
+      );
+      return totalItemQuatities;
+    },
+    subTotal: (state) => {
+      let subTotal = 0;
+      state.items.data.forEach(
+        (item) => (subTotal += parseInt(item.qty) * parseFloat(item.price))
+      );
+      return parseFloat(subTotal);
+    }, 
+    grandTotal: (state) => {
+      const subTotal = state.subTotal;
+      return subTotal + (subTotal * state.vat) / 100;
+    }, 
+  },
   actions: {
+    addItemToCart(product) {
+      let productInCart = this.items.data.find((item) => {
+        return item.id === product.id;
+      });
+
+      if (productInCart) {
+        product.qty += 1;
+        return;
+      } else {
+        product.qty = 1;
+      }
+
+      this.items.data.push(product);
+    },
     async getItems(params = "") {
       try {
         this.items.isLoading = true;
@@ -33,7 +68,7 @@ export const useCartStore = defineStore({
       } catch (error) {
         return error;
       }
-    }, 
+    },
     async updateItem(form, id) {
       try {
         return await form.put(`${apiEndpoint}/${id}`);

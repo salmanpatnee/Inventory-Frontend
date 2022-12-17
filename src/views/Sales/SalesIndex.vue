@@ -58,8 +58,11 @@ const handleDelete = async (id) => {
     .catch((error) => flashError());
 };
 
-const handleShow = async (id) => {
+const handleShow = (id) => {
   router.push({ name: "sales.show", params: { id: id } });
+};
+const handleEdit = (id) => {
+  router.push({ name: "sales.edit", params: { id: id } });
 };
 
 const handleSort = async (sort) => {
@@ -99,7 +102,7 @@ onMounted(async () => {
         />
         <tbody>
           <tr v-for="sale in sales.data" :key="sale.id">
-            <td>#{{ sale.id }}</td>
+            <td>#{{ sale.invoice_no }}</td>
             <td><AppDate :timestamp="sale.date" /></td>
             <td>{{ sale.customer.name }}</td>
             <td>{{ sale.grand_total }}</td>
@@ -119,9 +122,16 @@ onMounted(async () => {
               <button
                 @click="handleShow(sale.id)"
                 type="button"
-                class="btn btn-sm btn-info mr-2"
+                class="btn btn-sm btn-primary mr-2"
               >
                 <i class="fas fa-fw fa-eye"></i>
+              </button>
+              <button
+                @click="handleEdit(sale.id)"
+                type="button"
+                class="btn btn-sm btn-info mr-2"
+              >
+                <i class="fas fa-fw fa-edit"></i>
               </button>
               <button
                 @click="handleDelete(sale.id)"

@@ -23,8 +23,8 @@ const emit = defineEmits(["addToCart", "itemOutOfStock"]);
       src="/src/assets/img/product.png"
       :alt="product.name"
     />
-    <div class="card-body">
-      <h5 class="card-title text-center">{{ product.name }}</h5>
+    <div class="card-body p-2">
+      <h6 class="card-title text-center mb-1">{{ product.name }}</h6>
       <div class="text-center">
         <span v-if="product.quantity > 0" class="badge badge-success"
           >Available {{ product.quantity }}</span

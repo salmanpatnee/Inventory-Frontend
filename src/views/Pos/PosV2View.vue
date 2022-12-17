@@ -1,67 +1,66 @@
 <script setup>
 import { useAuthStore } from "@/stores/auth.js";
+import { useCategoryStore } from "@/stores/categoryStore.js";
 import { useProductStore } from "@/stores/productStore.js";
 import { useCustomerStore } from "@/stores/customerStore.js";
 import { useCartStore } from "@/stores/cartStore.js";
 import { useSaleStore } from "@/stores/saleStore.js";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useFlash } from "@/composables/useFlash";
 import Form from "vform";
 import { computed, onMounted, ref, watch } from "vue";
-import ProductRow from "@/components/ProductRow.vue";
+import ProductCard from "@/components/ProductCard.vue";
 
 const authStore = useAuthStore();
+const categoryStore = useCategoryStore();
 const productStore = useProductStore();
 const customerStore = useCustomerStore();
 const cartStore = useCartStore();
 const saleStore = useSaleStore();
 const router = useRouter();
-const { confirmAtts, flashSuccess, flashError } = useFlash();
-let modal = null;
-const paginate = ref(10);
+const route = useRoute();
+const { flashSuccess, flashError } = useFlash();
 const search = ref("");
-const sortColumn = ref({ path: "name", order: "asc" });
+const category_id = ref("");
 
 const user = computed(() => {
   return authStore.user.data;
 });
+
 const products = computed(() => productStore.products.data);
 const isproductsLoading = computed(() => productStore.products.isLoading);
+
+const categories = computed(() => categoryStore.categories.data);
 const customers = computed(() => customerStore.customers.data);
+
 const items = computed(() => cartStore.items.data);
 const isItemsLoading = computed(() => cartStore.items.isLoading);
+
+const totalItemQuantities = computed(() => cartStore.totalItemQuatities);
+const subTotal = computed(() => cartStore.subTotal);
+const grandTotal = computed(() => cartStore.grandTotal);
 const sale = computed(() => saleStore.currentSale.data);
-const invoiceNo = computed(() => {
-  return saleStore.invoiceNo.data;
-});
 
 const columns = [
   { path: "product", label: "Product" },
   { path: "quantity", label: "Qty" },
-  //   { path: "unit", label: "Unit" },
   { path: "total", label: "Total" },
   { path: "", label: "" },
 ];
 
-const productColumns = [
-  { path: "name", label: "Name", sortable: true },
-  { path: "price", label: "Price", sortable: true },
-  { path: "quantity", label: "Stock", sortable: true },
-  { path: "", label: "Action" },
-];
-
 const form = ref(
   new Form({
-    seller: user.value.name,
-    invoice_no: invoiceNo.value,
+    user_id: user.value.id,
+    invoice_no: null,
     product_id: null,
     customer_id: "",
     pay: null,
     due: null,
+    transaction_id: null,
     payment_method_id: "",
     total_quantities: null,
     sub_total: null,
-    tax: 5,
+    vat: 5,
     grand_total: null,
   })
 );
@@ -77,69 +76,54 @@ const customerForm = ref(
 );
 
 watch(
-  () => paginate.value,
-  (newVal, prevVal) => {
+  () => search.value,
+  (newTerm, prevTerm) => {
+    category_id.value = "";
     getProducts();
   }
 );
+
 watch(
-  () => search.value,
+  () => category_id.value,
   (newTerm, prevTerm) => {
     getProducts();
   }
 );
-const displayTotalQuantities = computed(() => {
-  let totalQuantites = 0;
-  items.value.forEach((item) => (totalQuantites += parseInt(item.quantity)));
-  return totalQuantites;
-});
 
-const displaySubTotal = computed(() => {
-  let subTotal = 0;
-  items.value.forEach((item) => (subTotal += parseFloat(item.sub_total)));
-  return subTotal.toFixed(2);
-});
-
-const displayGrandTotal = computed(() => {
-  const subTotal = parseFloat(displaySubTotal.value);
-  let grandTotal = subTotal + (subTotal * form.value.tax) / 100;
-  return grandTotal.toFixed(2);
-});
-
-watch(displayTotalQuantities, (newQty, prevQty) => {
+watch(totalItemQuantities, (newQty, prevQty) => {
   form.value.total_quantities = newQty;
 });
 
-watch(displaySubTotal, (newSubTotal, prevSubTotal) => {
+watch(subTotal, (newSubTotal, prevSubTotal) => {
   form.value.sub_total = newSubTotal;
 });
-
-watch(displayGrandTotal, (newTotal, prevTotal) => {
-  form.value.grand_total = newTotal;
+watch(grandTotal, (newGrandTotal, prevGrandTotal) => {
+  form.value.grand_total = newGrandTotal;
 });
 
+const getCategories = async () => {
+  await categoryStore.getCategories();
+};
 const getProducts = async (page = 1) => {
-  const { order, path } = sortColumn.value;
-  const params = `?page=${page}&paginate=${paginate.value}&search=${search.value}&sortOrder=${order}&orderBy=${path}`;
+  const params = `?page=${page}&search=${search.value}&category=${category_id.value}`;
   await productStore.getProducts(params);
 };
 
 const getInvoiceNo = async () => {
   await saleStore.getInvoiceNo();
+  form.value.invoice_no = saleStore.invoiceNo.data;
 };
 
-const handleSort = async (sort) => {
-  sortColumn.value.path = sort.path;
-  sortColumn.value.order = sort.order;
-  await getProducts();
+const getSale = async () => {
+  await saleStore.getSale(route.params.id);
+  form.value.fill(sale.value);
+  form.value.customer_id = sale.value.customer.id;
+  form.value.vat = sale.value.vat;
+  form.value.grand_total = sale.value.grand_total;
 };
 
 const getCustomers = async () => {
   await customerStore.getCustomers();
-};
-
-const getCartItems = async (page = 1) => {
-  await cartStore.getItems();
 };
 
 const createCustomerModal = () => {
@@ -173,29 +157,7 @@ const handleFullPaid = () => {
 };
 
 const handleAddToCart = async (product) => {
-  
-  items.value.map(item => {
-    if(item.product.id === product.id) {
-      if(item.quantity + 1 > product.quantity){
-        flashError(`Product is out of stock you can max order ${product.quantity}`);
-        return;
-      }
-    }
-  })
-
-
-  try {
-    form.value.product_id = product.id;
-    const { data: response } = await cartStore.addItem(form.value);
-    if (response.status === "success") {
-      getCartItems();
-      flashSuccess(response.message);
-    } else {
-      flashError(response.message);
-    }
-  } catch (error) {
-    flashError("Something went wrong.");
-  }
+  cartStore.addItemToCart(product);
 };
 
 const handleOutOfStockItem = () => {
@@ -204,33 +166,7 @@ const handleOutOfStockItem = () => {
 const handleRemoveCartItem = async (id) => {
   const originalCartItems = items.value;
 
-  items.value = originalCartItems.filter((cart) => cart.id !== id);
-
-  Swal.fire(confirmAtts())
-    .then(async (result) => {
-      if (result.isConfirmed) {
-        const { data: response } = await cartStore.deleteItem(id);
-        if (response.status === "success") flashSuccess(response.message);
-      } else {
-        items.value = originalCartItems;
-      }
-    })
-    .catch((error) => flashError());
-};
-
-const handleChangeQuantity = async (id, quantity) => {
-  if (quantity < 1) {
-    flashError("Item quantity can not negative.");
-    return;
-  }
-
-  form.value.id = id;
-  form.value.quantity = quantity;
-  const { data: response } = await cartStore.updateItem(form.value, id);
-  if (response.status === "success") {
-    flashSuccess(response.message);
-    getCartItems();
-  }
+  items.value = originalCartItems.filter((item) => item.id !== id);
 };
 
 const handleCheckout = async () => {
@@ -246,11 +182,23 @@ const handleCheckout = async () => {
   }
 };
 
+const handleCalculateDue = () => {
+  // form.value.due = 100
+  form.value.due =
+    parseFloat(form.value.grand_total) - parseFloat(form.value.pay);
+};
+
 onMounted(async () => {
-  await getInvoiceNo();
+  await getCategories();
   await getProducts();
   await getCustomers();
-  await getCartItems();
+
+  if (route.params.id) {
+    await getSale();
+  } else {
+    await getInvoiceNo();
+    // await getCartItems();
+  }
 });
 </script>
 
@@ -260,190 +208,247 @@ onMounted(async () => {
   <div class="row">
     <div class="col-xl-6 col-lg-5">
       <AppPanel>
-        <div class="input-group mb-3">
-          <div class="input-group-prepend">
-            <span class="input-group-text" id="seller">
-              <i class="fa fa-user"></i>
-            </span>
-          </div>
-          <input
-            type="text"
-            readonly
-            class="form-control"
-            v-model="form.seller"
-          />
-        </div>
-        <div class="input-group mb-3">
-          <div class="input-group-prepend">
-            <span class="input-group-text" id="invoice-no">
-              <i class="fa fa-atlas"></i>
-            </span>
-          </div>
-          <input
-            type="text"
-            readonly
-            class="form-control"
-            v-model="form.invoice_no"
-          />
-        </div>
-        <label for="customer_id">Customer</label>
-        <div class="input-group mb-3">
-          <select
-            v-model="form.customer_id"
-            id="customer_id"
-            class="form-control"
-          >
-            <option value="">Select Customer</option>
-            <option
-              v-for="customer in customers.data"
-              :key="customer.id"
-              :value="customer.id"
-            >
-              {{ `${customer.name} (#${customer.id})` }}
-            </option>
-          </select>
-          <div class="input-group-prepend">
-            <button
-              @click="createCustomerModal"
-              class="btn btn-sm btn-add-customer"
-              type="button"
-            >
-              <span class="input-group-text">
-                <i class="fa fa-user-plus"></i>
+        <form @submit.prevent="handleCheckout">
+          <div class="input-group mb-3">
+            <div class="input-group-prepend">
+              <span class="input-group-text" id="seller">
+                <i class="fa fa-user"></i>
               </span>
-            </button>
+            </div>
+            <input
+              type="text"
+              readonly
+              class="form-control"
+              :value="user.name"
+            />
           </div>
-        </div>
-        <div class="mt-5 table-responsive mb-3">
-          <table class="table align-items-center table-flush">
-            <AppTableHeader :columns="columns" />
-            <tbody>
-              <tr v-for="item in items" :key="item.id">
-                <td>{{ item.product.name }}</td>
-                <td>
-                  <div class="d-flex">
+          <div class="input-group mb-3">
+            <div class="input-group-prepend">
+              <span class="input-group-text" id="invoice-no">
+                <i class="fa fa-atlas"></i>
+              </span>
+            </div>
+            <input
+              type="text"
+              readonly
+              class="form-control"
+              v-model="form.invoice_no"
+            />
+          </div>
+          <label for="customer_id">Customer</label>
+          <div class="input-group mb-3">
+            <select
+              v-model="form.customer_id"
+              id="customer_id"
+              class="form-control"
+            >
+              <option value="">Select Customer</option>
+              <option
+                v-for="customer in customers.data"
+                :key="customer.id"
+                :value="customer.id"
+              >
+                {{ `${customer.name} (#${customer.id})` }}
+              </option>
+            </select>
+            <div class="input-group-prepend">
+              <button
+                @click="createCustomerModal"
+                class="btn btn-sm btn-add-customer"
+                type="button"
+              >
+                <span class="input-group-text">
+                  <i class="fa fa-user-plus"></i>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div class="text-center alert alert-info" v-if="isItemsLoading">
+            Loading...
+          </div>
+
+          <div class="mt-5 table-responsive mb-3" v-else>
+            <table class="table align-items-center table-flush">
+              <AppTableHeader :columns="columns" />
+              <tbody>
+                <tr v-for="item in items" :key="item.id">
+                  <td>{{ item.name }}</td>
+                  <td>
+                    <div class="d-flex">
+                      <input
+                        type="number"
+                        min="1"
+                        :max="item.quantity"
+                        class="form-control quantity"
+                        v-model="item.qty"
+                      />
+                    </div>
+                  </td>
+                  <!-- <td>{{ item.unit_price }}</td> -->
+                  <!-- <td>{{ item.sub_total }}</td> -->
+                  <td>{{ item.qty * item.price }}</td>
+                  <td>
+                    <button
+                      @click="handleRemoveCartItem(item.id)"
+                      type="button"
+                      class="btn btn-sm btn-danger"
+                    >
+                      <i class="fa fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <hr />
+          <div class="py-3 row">
+            <div class="col">
+              <label for="vat">Tax</label>
+              <div class="input-group mb-3">
+                <input
+                  v-model="form.vat"
+                  type="number"
+                  for="vat"
+                  class="form-control"
+                />
+                <div class="input-group-append">
+                  <span class="input-group-text"
+                    ><i class="fa fa-percent"></i
+                  ></span>
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <label for="total">Total</label>
+              <div class="input-group mb-3">
+                <div class="input-group-append">
+                  <span class="input-group-text"
+                    ><i class="fa fa-dollar-sign"></i
+                  ></span>
+                </div>
+                <input
+                  v-model="form.grand_total"
+                  type="number"
+                  readonly
+                  for="total"
+                  class="form-control"
+                />
+              </div>
+            </div>
+          </div>
+          <hr />
+          <div class="row">
+            <div class="col-5">
+              <select
+                v-model="form.payment_method_id"
+                class="form-control form-control-sm mb-3"
+              >
+                <option value="">Select Payment Method</option>
+                <option value="1">Cash</option>
+                <option value="2">Bank</option>
+              </select>
+            </div>
+            <div class="col">
+              <div class="row" v-if="form.payment_method_id == 1">
+                <div class="col">
+                  <div class="input-group mb-3">
+                    <div class="input-group-append">
+                      <span class="input-group-text"
+                        ><i class="fa fa-money-bill-alt"></i
+                      ></span>
+                    </div>
                     <input
                       type="number"
-                      min="1"
-                      @change="
-                        handleChangeQuantity(item.id, $event.target.value)
-                      "
-                      class="form-control quantity"
-                      v-model="item.quantity"
+                      @keyup="handleCalculateDue"
+                      placeholder="Pay"
+                      v-model="form.pay"
+                      class="form-control form-control-sm"
                     />
                   </div>
-                </td>
-                <!-- <td>{{ item.unit_price }}</td> -->
-                <td>{{ item.sub_total }}</td>
-                <td>
-                  <button
-                    @click="handleRemoveCartItem(item.id)"
-                    type="button"
-                    class="btn btn-sm btn-danger"
-                  >
-                    <i class="fa fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <hr />
-        <div class="py-3 row">
-          <div class="col">
-            <label for="tax">Tax</label>
-            <div class="input-group mb-3">
-              <input
-                v-model="form.tax"
-                type="number"
-                for="tax"
-                class="form-control"
-              />
-              <div class="input-group-append">
-                <span class="input-group-text"
-                  ><i class="fa fa-percent"></i
-                ></span>
+                </div>
+                <div class="col">
+                  <div class="input-group mb-3">
+                    <div class="input-group-append">
+                      <span class="input-group-text"
+                        ><i class="fa fa-exchange-alt"></i
+                      ></span>
+                    </div>
+                    <input
+                      type="text"
+                      readonly
+                      v-model="form.due"
+                      placeholder="Change"
+                      class="form-control form-control-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div v-if="form.payment_method_id == 2" class="input-group mb-3">
+                <input
+                  type="text"
+                  v-model="form.transaction_id"
+                  placeholder="Transaction Code"
+                  class="form-control form-control-sm"
+                />
+                <div class="input-group-append">
+                  <span class="input-group-text"
+                    ><i class="fa fa-lock"></i
+                  ></span>
+                </div>
               </div>
             </div>
           </div>
-          <div class="col">
-            <label for="total">Total</label>
-            <div class="input-group mb-3">
-              <div class="input-group-append">
-                <span class="input-group-text"
-                  ><i class="fa fa-dollar-sign"></i
-                ></span>
-              </div>
-              <input
-                v-model="form.grand_total"
-                type="number"
-                readonly
-                for="total"
-                class="form-control"
-              />
+          <div class="row mt-3">
+            <div class="col text-end">
+              <button class="btn btn-lg btn-primary">Save Sale</button>
             </div>
           </div>
-        </div>
-        <hr />
-        <div class="row">
-          <div class="col">
-            <select class="form-control mb-3">
-              <option>Select Payment Method</option>
-            </select>
-          </div>
-          <div class="col">
-            <div class="input-group mb-3">
-              <input
-                type="text"
-                placeholder="Transaction Code"
-                for="tax"
-                class="form-control"
-              />
-              <div class="input-group-append">
-                <span class="input-group-text"><i class="fa fa-lock"></i></span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="row mt-3">
-          <div class="col text-end">
-            <button class="btn btn-lg btn-primary">Save Sale</button>
-          </div>
-        </div>
+        </form>
       </AppPanel>
     </div>
     <div class="col-xl-6 col-lg-7">
       <AppPanel>
-        <div class="row">
-          <div class="col-sm-4">
-            <AppPaginateDropdown v-model="paginate" />
+        <div class="row mb-3">
+          <div class="col-sm-6">
+            <select
+              v-model="category_id"
+              class="form-control form-control-sm"
+              id="category"
+            >
+              <option value="">Select Category</option>
+              <option
+                :value="category.id"
+                v-for="category in categories"
+                :key="category.id"
+              >
+                {{ category.name }}
+              </option>
+            </select>
           </div>
-
-          <div class="col-sm-8">
+          <div class="col-sm-6">
             <AppSearch v-model="search" />
           </div>
         </div>
         <div class="text-center alert alert-info" v-if="isproductsLoading">
           Loading...
         </div>
-        <div v-else class="table-responsive">
-          <table class="table align-items-center table-flush">
-            <AppTableHeader
-              @onSort="handleSort"
-              :columns="productColumns"
-              :sortColumn="sortColumn"
-            />
-            <tbody>
-              <product-row
-                v-for="product in products.data"
-                :key="product.id"
+        <div v-else>
+          <div class="row">
+            <div
+              v-for="product in products.data"
+              :key="product.id"
+              class="col-sm-3 mb-3"
+            >
+              <product-card
                 :product="product"
                 @add-to-cart="handleAddToCart"
                 @item-out-of-stock="handleOutOfStockItem"
               />
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
+
         <div class="d-flex justify-content-center mt-4">
           <AppPagination
             :data="products"
